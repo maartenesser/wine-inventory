@@ -8,40 +8,43 @@ export interface QuickWineExtraction {
   chateau: string | null
   wine_name: string | null
   vintage: number | null
+  color: 'red' | 'white' | 'rosé' | 'sparkling' | 'champagne' | 'dessert' | null
+  // These fields are optional - often not visible on label, will be enriched later
   region: string | null
   country: string | null
-  color: 'red' | 'white' | 'rosé' | 'sparkling' | null
   grape_variety: string | null
   appellation: string | null
 }
 
-// FAST extraction prompt - only essential info, no background research
-const QUICK_EXTRACTION_PROMPT = `Look at this wine bottle label and extract ONLY the basic information visible on the label.
+// FAST extraction prompt - only read what's clearly visible on the label
+const QUICK_EXTRACTION_PROMPT = `Look at this wine bottle label and extract ONLY what you can clearly READ on the label.
 Return ONLY valid JSON (no markdown, no code blocks):
 
 {
-  "chateau": "Producer/Chateau name from label",
-  "wine_name": "Wine name if different from chateau, otherwise null",
+  "chateau": "Producer/Chateau/Domaine name from label",
+  "wine_name": "Specific wine name if visible and different from chateau, otherwise null",
   "vintage": 2020,
-  "region": "Wine region if visible",
-  "country": "Country if visible",
-  "color": "red or white or rosé or sparkling",
-  "grape_variety": "Grape variety if visible on label",
-  "appellation": "Appellation if visible"
+  "color": "red or white or rosé or sparkling or champagne or dessert",
+  "region": null,
+  "country": null,
+  "grape_variety": null,
+  "appellation": null
 }
 
-IMPORTANT:
-- Only extract what you can clearly see on the label
-- Be fast - don't research or infer, just read the label
-- If something is not visible, set it to null
-- Focus on chateau and vintage - these are most important`
+CRITICAL RULES:
+- ONLY extract chateau/producer name and vintage - these are MOST IMPORTANT
+- For color: determine from label design, bottle shape, or wine color if visible
+- Set region/country/grape_variety/appellation to null - these will be looked up later
+- Do NOT guess or infer information that is not clearly printed on the label
+- Be FAST - just read the text, don't research
+- If vintage is not visible, set to null`
 
 /**
  * FAST extraction - only reads the label, no additional research
  * Use this for quick batch scanning
  */
 export async function extractWineQuick(imageBase64: string, mimeType: string = 'image/jpeg'): Promise<QuickWineExtraction> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' }) // Use faster model
+  const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' }) // Gemini 3 Flash - latest model
 
   try {
     const result = await model.generateContent([
@@ -70,8 +73,14 @@ export async function extractWineQuick(imageBase64: string, mimeType: string = '
     cleanedText = cleanedText.trim()
 
     return JSON.parse(cleanedText)
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error in quick wine extraction:', error)
+
+    // Check for quota exceeded error
+    if (error && typeof error === 'object' && 'status' in error && error.status === 429) {
+      throw new Error('API quota exceeded. Please try again later or check your Google AI billing.')
+    }
+
     throw new Error('Failed to extract wine information from image')
   }
 }
@@ -110,7 +119,7 @@ IMPORTANT:
 - Return ONLY the JSON object, no additional text or formatting`
 
 export async function extractWineFromImage(imageBase64: string, mimeType: string = 'image/jpeg'): Promise<GeminiWineExtraction> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' })
 
   try {
     const result = await model.generateContent([
@@ -141,8 +150,14 @@ export async function extractWineFromImage(imageBase64: string, mimeType: string
     const extracted: GeminiWineExtraction = JSON.parse(cleanedText)
 
     return extracted
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error extracting wine info from image:', error)
+
+    // Check for quota exceeded error
+    if (error && typeof error === 'object' && 'status' in error && error.status === 429) {
+      throw new Error('API quota exceeded. Please try again later or check your Google AI billing.')
+    }
+
     throw new Error('Failed to extract wine information from image')
   }
 }
@@ -178,7 +193,7 @@ export async function getFoodPairings(wine: {
   cheese: string[]
   vegetarian: string[]
 }> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' })
 
   const prompt = FOOD_PAIRING_PROMPT
     .replace('{chateau}', wine.chateau || '')

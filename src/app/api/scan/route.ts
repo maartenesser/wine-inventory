@@ -41,9 +41,13 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Scan error:', error)
+
+    const errorMessage = error instanceof Error ? error.message : 'Failed to scan wine label'
+    const isQuotaError = errorMessage.includes('quota')
+
     return NextResponse.json(
-      { error: 'Failed to scan wine label' },
-      { status: 500 }
+      { error: errorMessage },
+      { status: isQuotaError ? 429 : 500 }
     )
   }
 }

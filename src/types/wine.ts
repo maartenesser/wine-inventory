@@ -7,7 +7,7 @@ export interface Wine {
   appellation: string | null
   country: string | null
   grape_variety: string | null
-  color: 'red' | 'white' | 'rosé' | 'sparkling' | null
+  color: 'red' | 'white' | 'rosé' | 'sparkling' | 'champagne' | 'dessert' | null
   alcohol_pct: number | null
   bottle_size: string | null  // e.g., 'standard', 'magnum', 'double_magnum'
   quantity: number
@@ -36,7 +36,7 @@ export interface WineFormData {
   appellation?: string
   country?: string
   grape_variety?: string
-  color?: 'red' | 'white' | 'rosé' | 'sparkling'
+  color?: 'red' | 'white' | 'rosé' | 'sparkling' | 'champagne' | 'dessert'
   alcohol_pct?: number
   bottle_size?: string
   quantity: number
@@ -52,7 +52,7 @@ export interface GeminiWineExtraction {
   appellation: string | null
   country: string | null
   grape_variety: string | null
-  color: 'red' | 'white' | 'rosé' | 'sparkling' | null
+  color: 'red' | 'white' | 'rosé' | 'sparkling' | 'champagne' | 'dessert' | null
   alcohol_pct: number | null
   winemaker_info: string | null
   food_pairing: string[] | null

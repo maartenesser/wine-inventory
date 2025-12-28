@@ -1,12 +1,10 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
+import { Header } from '@/components/layout/Header'
 import { SummaryCards } from '@/components/dashboard/SummaryCards'
 import { WineTable } from '@/components/dashboard/WineTable'
 import { Separator } from '@/components/ui/separator'
-import { Camera, Download, RefreshCw, Wine, Globe } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Wine as WineType, DashboardStats } from '@/types/wine'
 
@@ -43,6 +41,7 @@ export default function DashboardPage() {
 
   const fetchWines = useCallback(async () => {
     try {
+      setIsLoading(true)
       const response = await fetch('/api/wines')
       const data = await response.json()
 
@@ -181,48 +180,15 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen">
-      {/* Header */}
-      <header className="border-b">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Wine className="h-6 w-6 text-primary" />
-              <h1 className="text-xl font-bold">Wine Inventory</h1>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => fetchWines()}
-                disabled={isLoading}
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleExport}>
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
-              <Link href="/map">
-                <Button variant="outline" size="sm">
-                  <Globe className="h-4 w-4 mr-2" />
-                  Map
-                </Button>
-              </Link>
-              <Link href="/scan">
-                <Button size="sm">
-                  <Camera className="h-4 w-4 mr-2" />
-                  Scan Wine
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen flex flex-col">
+      <Header
+        onRefresh={fetchWines}
+        onExport={handleExport}
+        isLoading={isLoading}
+      />
 
       {/* Main content */}
-      <main className="container mx-auto px-4 py-6">
+      <main className="flex-1 container mx-auto px-4 py-6">
         {/* Summary cards */}
         <SummaryCards stats={stats} />
 

@@ -2,16 +2,14 @@
 
 import { useState, useEffect, use } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ArrowLeft, Save, Loader2, Wine, Trash2, MapPin, GlassWater } from 'lucide-react'
+import { Save, Loader2, Wine, Trash2 } from 'lucide-react'
+import { Header } from '@/components/layout/Header'
 import { toast } from 'sonner'
 import type { Wine as WineType } from '@/types/wine'
 import { BOTTLE_SIZES, getBottleSize } from '@/lib/bottle-sizes'
@@ -208,65 +206,52 @@ export default function WineDetailPage({ params }: { params: Promise<{ id: strin
   }
 
   return (
-    <div className="min-h-screen">
-      {/* Header */}
-      <header className="border-b">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link href="/">
-                <Button variant="ghost" size="sm">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back
-                </Button>
-              </Link>
-              <div className="flex items-center gap-2">
-                <Wine className="h-6 w-6 text-primary" />
-                <h1 className="text-xl font-bold">Edit Wine</h1>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" size="sm" disabled={isDeleting}>
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete Wine</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Are you sure you want to delete &quot;{wine.chateau}&quot;? This action cannot be undone.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
-                      Delete
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-              <Button onClick={handleSave} disabled={isSaving}>
-                {isSaving ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Save className="h-4 w-4 mr-2" />
-                )}
-                Save Changes
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen flex flex-col pb-20 md:pb-6">
+      <Header />
 
       {/* Main content */}
-      <main className="container mx-auto px-4 py-6 max-w-4xl">
-        <div className="grid md:grid-cols-3 gap-6">
+      <main className="flex-1 container mx-auto px-4 py-6 max-w-4xl">
+        {/* Page title */}
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-lg md:text-xl font-bold">Edit Wine</h1>
+          {/* Desktop actions */}
+          <div className="hidden md:flex items-center gap-2">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm" disabled={isDeleting}>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Wine</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete &quot;{wine.chateau}&quot;? This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            <Button onClick={handleSave} disabled={isSaving}>
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              Save Changes
+            </Button>
+          </div>
+        </div>
+        <div className="grid gap-4 md:gap-6 md:grid-cols-3">
           {/* Wine image */}
           <Card className="md:col-span-1">
-            <CardContent className="pt-6">
+            <CardContent className="p-4 md:pt-6">
               {wine.image_data ? (
                 <img
                   src={`data:image/jpeg;base64,${wine.image_data}`}
@@ -275,21 +260,21 @@ export default function WineDetailPage({ params }: { params: Promise<{ id: strin
                 />
               ) : (
                 <div className="w-full aspect-[3/4] bg-muted rounded-lg flex items-center justify-center">
-                  <Wine className="h-16 w-16 text-muted-foreground" />
+                  <Wine className="h-12 w-12 md:h-16 md:w-16 text-muted-foreground" />
                 </div>
               )}
             </CardContent>
           </Card>
 
           {/* Edit form */}
-          <div className="md:col-span-2 space-y-6">
+          <div className="md:col-span-2 space-y-4 md:space-y-6">
             {/* Basic Info */}
             <Card>
-              <CardHeader>
-                <CardTitle>Basic Information</CardTitle>
-                <CardDescription>Core details about the wine</CardDescription>
+              <CardHeader className="px-4 py-4 md:px-6 md:py-6">
+                <CardTitle className="text-base md:text-lg">Basic Information</CardTitle>
+                <CardDescription className="text-xs md:text-sm">Core details about the wine</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="px-4 pb-4 md:px-6 md:pb-6 space-y-4">
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="chateau">Chateau / Producer *</Label>
@@ -333,6 +318,8 @@ export default function WineDetailPage({ params }: { params: Promise<{ id: strin
                         <SelectItem value="white">White</SelectItem>
                         <SelectItem value="rosé">Rosé</SelectItem>
                         <SelectItem value="sparkling">Sparkling</SelectItem>
+                        <SelectItem value="champagne">Champagne</SelectItem>
+                        <SelectItem value="dessert">Dessert</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -363,11 +350,11 @@ export default function WineDetailPage({ params }: { params: Promise<{ id: strin
 
             {/* Origin */}
             <Card>
-              <CardHeader>
-                <CardTitle>Origin</CardTitle>
-                <CardDescription>Where the wine comes from</CardDescription>
+              <CardHeader className="px-4 py-4 md:px-6 md:py-6">
+                <CardTitle className="text-base md:text-lg">Origin</CardTitle>
+                <CardDescription className="text-xs md:text-sm">Where the wine comes from</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="px-4 pb-4 md:px-6 md:pb-6 space-y-4">
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="country">Country</Label>
@@ -402,11 +389,11 @@ export default function WineDetailPage({ params }: { params: Promise<{ id: strin
 
             {/* Inventory */}
             <Card>
-              <CardHeader>
-                <CardTitle>Inventory</CardTitle>
-                <CardDescription>Stock and pricing</CardDescription>
+              <CardHeader className="px-4 py-4 md:px-6 md:py-6">
+                <CardTitle className="text-base md:text-lg">Inventory</CardTitle>
+                <CardDescription className="text-xs md:text-sm">Stock and pricing</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="px-4 pb-4 md:px-6 md:pb-6 space-y-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="bottle_size">Bottle Size</Label>
@@ -465,11 +452,11 @@ export default function WineDetailPage({ params }: { params: Promise<{ id: strin
 
             {/* Tasting & Pairing */}
             <Card>
-              <CardHeader>
-                <CardTitle>Tasting & Pairing</CardTitle>
-                <CardDescription>Wine characteristics and food suggestions</CardDescription>
+              <CardHeader className="px-4 py-4 md:px-6 md:py-6">
+                <CardTitle className="text-base md:text-lg">Tasting & Pairing</CardTitle>
+                <CardDescription className="text-xs md:text-sm">Wine characteristics and food suggestions</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="px-4 pb-4 md:px-6 md:pb-6 space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="tasting_notes">Tasting Notes</Label>
                   <Textarea
@@ -504,11 +491,11 @@ export default function WineDetailPage({ params }: { params: Promise<{ id: strin
 
             {/* Producer Info */}
             <Card>
-              <CardHeader>
-                <CardTitle>About the Producer</CardTitle>
-                <CardDescription>Information about the winemaker or château</CardDescription>
+              <CardHeader className="px-4 py-4 md:px-6 md:py-6">
+                <CardTitle className="text-base md:text-lg">About the Producer</CardTitle>
+                <CardDescription className="text-xs md:text-sm">Information about the winemaker or château</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-4 pb-4 md:px-6 md:pb-6">
                 <div className="space-y-2">
                   <Label htmlFor="winemaker_info">Producer Information</Label>
                   <Textarea
@@ -524,6 +511,40 @@ export default function WineDetailPage({ params }: { params: Promise<{ id: strin
           </div>
         </div>
       </main>
+
+      {/* Mobile fixed action bar */}
+      <div className="fixed bottom-0 left-0 right-0 border-t bg-background p-4 flex gap-2 md:hidden">
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="destructive" size="lg" className="flex-1" disabled={isDeleting}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Wine</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete &quot;{wine.chateau}&quot;? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        <Button onClick={handleSave} disabled={isSaving} size="lg" className="flex-1">
+          {isSaving ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <Save className="h-4 w-4 mr-2" />
+          )}
+          Save
+        </Button>
+      </div>
     </div>
   )
 }

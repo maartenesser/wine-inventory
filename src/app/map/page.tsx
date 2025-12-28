@@ -1,9 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
 import dynamic from 'next/dynamic'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -13,7 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { ArrowLeft, Wine, MapPin, Globe, TrendingUp, Home } from 'lucide-react'
+import { Wine, MapPin, Globe, TrendingUp, Home } from 'lucide-react'
+import { Header } from '@/components/layout/Header'
 import type { Wine as WineType } from '@/types/wine'
 import { findWineRegion } from '@/lib/wine-regions'
 
@@ -198,90 +197,73 @@ export default function MapPage() {
     : locations.find(l => l.id === locationFilter)?.name || 'Unknown'
 
   return (
-    <div className="min-h-screen">
-      {/* Header */}
-      <header className="border-b">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-            <div className="flex items-center gap-4">
-              <Link href="/">
-                <Button variant="ghost" size="sm">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back
-                </Button>
-              </Link>
-              <div className="flex items-center gap-2">
-                <Globe className="h-6 w-6 text-primary" />
-                <h1 className="text-xl font-bold">Wine Map</h1>
-              </div>
-            </div>
-            {locations.length > 0 && (
-              <div className="flex items-center gap-2 sm:ml-auto">
-                <span className="text-sm text-muted-foreground">Storage:</span>
-                <Select value={locationFilter} onValueChange={setLocationFilter}>
-                  <SelectTrigger className="w-[180px]">
-                    <Home className="h-4 w-4 mr-2" />
-                    <SelectValue placeholder="All locations" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All locations</SelectItem>
-                    {locations.map((location) => (
-                      <SelectItem key={location.id} value={location.id}>
-                        {location.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen flex flex-col">
+      <Header />
 
       {/* Main content */}
-      <main className="container mx-auto px-4 py-6">
+      <main className="flex-1 container mx-auto px-4 py-6">
+        {/* Location filter */}
+        {locations.length > 0 && (
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-sm text-muted-foreground">Storage:</span>
+            <Select value={locationFilter} onValueChange={setLocationFilter}>
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <Home className="h-4 w-4 mr-2 flex-shrink-0" />
+                <SelectValue placeholder="All locations" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All locations</SelectItem>
+                {locations.map((location) => (
+                  <SelectItem key={location.id} value={location.id}>
+                    {location.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         {/* Summary cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4 mb-6">
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="px-4 py-4 md:px-6 md:py-6">
               <div className="flex items-center gap-2">
-                <Wine className="h-5 w-5 text-primary" />
-                <div>
-                  <p className="text-2xl font-bold">{totalBottles}</p>
-                  <p className="text-sm text-muted-foreground">Total Bottles</p>
+                <Wine className="h-4 w-4 md:h-5 md:w-5 text-primary flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xl md:text-2xl font-bold">{totalBottles}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Total Bottles</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="px-4 py-4 md:px-6 md:py-6">
               <div className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-green-600" />
-                <div>
-                  <p className="text-2xl font-bold">{formatCurrency(totalValue)}</p>
-                  <p className="text-sm text-muted-foreground">Total Value</p>
+                <TrendingUp className="h-4 w-4 md:h-5 md:w-5 text-green-600 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-lg md:text-2xl font-bold truncate">{formatCurrency(totalValue)}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Total Value</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="px-4 py-4 md:px-6 md:py-6">
               <div className="flex items-center gap-2">
-                <Globe className="h-5 w-5 text-blue-600" />
-                <div>
-                  <p className="text-2xl font-bold">{uniqueCountries}</p>
-                  <p className="text-sm text-muted-foreground">Countries</p>
+                <Globe className="h-4 w-4 md:h-5 md:w-5 text-blue-600 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xl md:text-2xl font-bold">{uniqueCountries}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Countries</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="px-4 py-4 md:px-6 md:py-6">
               <div className="flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-red-600" />
-                <div>
-                  <p className="text-2xl font-bold">{uniqueRegions}</p>
-                  <p className="text-sm text-muted-foreground">Regions</p>
+                <MapPin className="h-4 w-4 md:h-5 md:w-5 text-red-600 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xl md:text-2xl font-bold">{uniqueRegions}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Regions</p>
                 </div>
               </div>
             </CardContent>
@@ -290,23 +272,25 @@ export default function MapPage() {
 
         {/* Map */}
         <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>
+          <CardHeader className="px-4 py-4 md:px-6 md:py-6">
+            <CardTitle className="text-base md:text-lg">
               {locationFilter === 'all'
-                ? 'Your Wine Collection Around the World'
+                ? 'Your Wine Collection'
                 : `Wines in ${currentLocationName}`}
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs md:text-sm">
               {locationFilter === 'all'
-                ? 'Click on a region to see your wines from that area. Circle size indicates bottle count.'
-                : `Showing ${filteredWines.length} wines stored in ${currentLocationName}. Circle size indicates bottle count.`}
+                ? 'Click on a region to see your wines. Circle size = bottle count.'
+                : `${filteredWines.length} wines in ${currentLocationName}.`}
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-2 pb-4 md:px-6 md:pb-6">
             {isLoading ? (
-              <Skeleton className="h-[600px] w-full" />
+              <Skeleton className="h-[350px] md:h-[500px] w-full" />
             ) : (
-              <WineMap wines={filteredWines} />
+              <div className="h-[350px] md:h-[500px]">
+                <WineMap wines={filteredWines} />
+              </div>
             )}
           </CardContent>
         </Card>
@@ -314,38 +298,38 @@ export default function MapPage() {
         {/* Storage Locations */}
         {locationStats.length > 0 && (
           <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Home className="h-5 w-5" />
-                By Storage Location (Cellar)
+            <CardHeader className="px-4 py-4 md:px-6 md:py-6">
+              <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                <Home className="h-4 w-4 md:h-5 md:w-5" />
+                By Storage Location
               </CardTitle>
-              <CardDescription>
-                Which wines are stored where. Click a location button to filter the map.
+              <CardDescription className="text-xs md:text-sm">
+                Tap to filter the map by cellar location
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <CardContent className="px-4 pb-4 md:px-6 md:pb-6">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
                 {locationStats.map((stat) => (
                   <button
                     key={stat.locationId}
                     onClick={() => setLocationFilter(
                       locationFilter === stat.locationId ? 'all' : stat.locationId
                     )}
-                    className={`p-4 rounded-lg text-left transition-colors ${
+                    className={`p-3 md:p-4 rounded-lg text-left transition-colors ${
                       locationFilter === stat.locationId
                         ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted/50 hover:bg-muted'
+                        : 'bg-muted/50 hover:bg-muted active:bg-muted'
                     }`}
                   >
-                    <p className="font-semibold text-lg">{stat.location}</p>
-                    <p className={`text-sm ${
+                    <p className="font-semibold text-sm md:text-lg truncate">{stat.location}</p>
+                    <p className={`text-xs md:text-sm ${
                       locationFilter === stat.locationId
                         ? 'text-primary-foreground/80'
                         : 'text-muted-foreground'
                     }`}>
                       {stat.bottleCount} bottles
                     </p>
-                    <p className={`text-sm font-medium ${
+                    <p className={`text-xs md:text-sm font-medium ${
                       locationFilter === stat.locationId
                         ? 'text-primary-foreground'
                         : ''
@@ -360,45 +344,45 @@ export default function MapPage() {
         )}
 
         {/* Stats */}
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid gap-4 md:gap-6 md:grid-cols-2">
           {/* Countries */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Globe className="h-5 w-5" />
+            <CardHeader className="px-4 py-4 md:px-6 md:py-6">
+              <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                <Globe className="h-4 w-4 md:h-5 md:w-5" />
                 By Country
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-4 pb-4 md:px-6 md:pb-6">
               {isLoading ? (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {[...Array(5)].map((_, i) => (
-                    <Skeleton key={i} className="h-12 w-full" />
+                    <Skeleton key={i} className="h-10 w-full" />
                   ))}
                 </div>
               ) : countryStats.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8">
+                <p className="text-muted-foreground text-center py-6 text-sm">
                   No wines with country information yet
                 </p>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {countryStats.map((stat, idx) => (
                     <div
                       key={idx}
-                      className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                      className="flex items-center justify-between p-2 md:p-3 rounded-lg bg-muted/50"
                     >
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl font-bold text-muted-foreground">
+                      <div className="flex items-center gap-2 md:gap-3 min-w-0">
+                        <span className="text-lg md:text-2xl font-bold text-muted-foreground w-6 md:w-8 flex-shrink-0">
                           {idx + 1}
                         </span>
-                        <div>
-                          <p className="font-medium">{stat.country}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {stat.wineCount} wines · {stat.bottleCount} bottles
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm md:text-base truncate">{stat.country}</p>
+                          <p className="text-xs md:text-sm text-muted-foreground">
+                            {stat.bottleCount} bottles
                           </p>
                         </div>
                       </div>
-                      <p className="font-semibold">{formatCurrency(stat.totalValue)}</p>
+                      <p className="font-semibold text-sm md:text-base flex-shrink-0 ml-2">{formatCurrency(stat.totalValue)}</p>
                     </div>
                   ))}
                 </div>
@@ -408,42 +392,42 @@ export default function MapPage() {
 
           {/* Top Regions */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin className="h-5 w-5" />
+            <CardHeader className="px-4 py-4 md:px-6 md:py-6">
+              <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                <MapPin className="h-4 w-4 md:h-5 md:w-5" />
                 Top Regions
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-4 pb-4 md:px-6 md:pb-6">
               {isLoading ? (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {[...Array(5)].map((_, i) => (
-                    <Skeleton key={i} className="h-12 w-full" />
+                    <Skeleton key={i} className="h-10 w-full" />
                   ))}
                 </div>
               ) : regionStats.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8">
+                <p className="text-muted-foreground text-center py-6 text-sm">
                   No wines with region information yet
                 </p>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {regionStats.map((stat, idx) => (
                     <div
                       key={idx}
-                      className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                      className="flex items-center justify-between p-2 md:p-3 rounded-lg bg-muted/50"
                     >
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl font-bold text-muted-foreground">
+                      <div className="flex items-center gap-2 md:gap-3 min-w-0">
+                        <span className="text-lg md:text-2xl font-bold text-muted-foreground w-6 md:w-8 flex-shrink-0">
                           {idx + 1}
                         </span>
-                        <div>
-                          <p className="font-medium">{stat.region}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {stat.country} · {stat.bottleCount} bottles
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm md:text-base truncate">{stat.region}</p>
+                          <p className="text-xs md:text-sm text-muted-foreground truncate">
+                            {stat.country}
                           </p>
                         </div>
                       </div>
-                      <p className="font-semibold">{formatCurrency(stat.totalValue)}</p>
+                      <p className="font-semibold text-sm md:text-base flex-shrink-0 ml-2">{formatCurrency(stat.totalValue)}</p>
                     </div>
                   ))}
                 </div>

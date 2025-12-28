@@ -49,6 +49,7 @@ export async function POST(request: NextRequest) {
       color: body.color || null,
       alcohol_pct: body.alcohol_pct || null,
       quantity: body.quantity || 1,
+      bottle_size: body.bottle_size || 'standard',
       price_min: body.price_min || null,
       price_max: body.price_max || null,
       price_avg: body.price_avg || null,

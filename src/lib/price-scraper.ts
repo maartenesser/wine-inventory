@@ -173,7 +173,7 @@ async function estimatePriceWithGemini(
   region?: string | null,
   bottleSize: string = 'standard'
 ): Promise<PriceResult> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' })
   const sizeInfo = getBottleSize(bottleSize)
 
   const wineDescription = [
