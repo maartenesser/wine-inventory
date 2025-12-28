@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/select'
 import { Trash2, Plus, Minus, Search, MapPin, Wine as WineIcon, Pencil } from 'lucide-react'
 import type { Wine } from '@/types/wine'
+import { getBottleSize } from '@/lib/bottle-sizes'
 
 interface Location {
   id: string
@@ -145,6 +146,7 @@ export function WineTable({ wines, locations = [], onUpdateQuantity, onDelete }:
               <TableHead>Region</TableHead>
               <TableHead>Vintage</TableHead>
               <TableHead>Color</TableHead>
+              <TableHead>Size</TableHead>
               <TableHead className="text-center">Qty</TableHead>
               <TableHead className="text-right">Price</TableHead>
               <TableHead className="text-right">Total</TableHead>
@@ -154,7 +156,7 @@ export function WineTable({ wines, locations = [], onUpdateQuantity, onDelete }:
           <TableBody>
             {filteredWines.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                   {wines.length === 0
                     ? 'No wines in your collection yet. Scan a bottle to get started!'
                     : 'No wines match your search.'}
@@ -203,6 +205,15 @@ export function WineTable({ wines, locations = [], onUpdateQuantity, onDelete }:
                   </TableCell>
                   <TableCell>{wine.vintage || '-'}</TableCell>
                   <TableCell>{getColorBadge(wine.color)}</TableCell>
+                  <TableCell>
+                    {wine.bottle_size ? (
+                      <span className="text-sm">
+                        {getBottleSize(wine.bottle_size)?.volume || '750ml'}
+                      </span>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">750ml</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-center gap-1">
                       <Button

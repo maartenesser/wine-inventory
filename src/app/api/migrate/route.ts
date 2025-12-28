@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
     const migrations = [
       'ALTER TABLE wines ADD COLUMN IF NOT EXISTS winemaker_info TEXT',
       'ALTER TABLE wines ADD COLUMN IF NOT EXISTS drinking_window TEXT',
+      "ALTER TABLE wines ADD COLUMN IF NOT EXISTS bottle_size TEXT DEFAULT 'standard'",
     ]
 
     const results = []
@@ -62,6 +63,7 @@ export async function GET() {
 -- Run this in Supabase SQL Editor:
 ALTER TABLE wines ADD COLUMN IF NOT EXISTS winemaker_info TEXT;
 ALTER TABLE wines ADD COLUMN IF NOT EXISTS drinking_window TEXT;
+ALTER TABLE wines ADD COLUMN IF NOT EXISTS bottle_size TEXT DEFAULT 'standard';
     `.trim()
   })
 }

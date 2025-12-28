@@ -6,6 +6,7 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const image = formData.get('image') as File | null
+    const bottleSize = formData.get('bottle_size') as string | null
 
     if (!image) {
       return NextResponse.json(
@@ -22,13 +23,14 @@ export async function POST(request: NextRequest) {
     // Extract wine info from image using Gemini
     const wineInfo = await extractWineFromImage(base64, image.type)
 
-    // Get price if we have a chateau name
+    // Get price if we have a chateau name (pass bottle size for price lookup)
     let priceInfo = null
     if (wineInfo.chateau) {
       priceInfo = await getWinePrice(
         wineInfo.chateau,
         wineInfo.vintage,
-        wineInfo.region
+        wineInfo.region,
+        bottleSize || 'standard'
       )
     }
 

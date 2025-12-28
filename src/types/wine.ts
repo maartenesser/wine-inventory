@@ -9,6 +9,7 @@ export interface Wine {
   grape_variety: string | null
   color: 'red' | 'white' | 'rosé' | 'sparkling' | null
   alcohol_pct: number | null
+  bottle_size: string | null  // e.g., 'standard', 'magnum', 'double_magnum'
   quantity: number
   price_min: number | null
   price_max: number | null
@@ -37,6 +38,7 @@ export interface WineFormData {
   grape_variety?: string
   color?: 'red' | 'white' | 'rosé' | 'sparkling'
   alcohol_pct?: number
+  bottle_size?: string
   quantity: number
   price_avg?: number
   image_url?: string

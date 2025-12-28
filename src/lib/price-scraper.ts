@@ -1,19 +1,23 @@
 import * as cheerio from 'cheerio'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import type { PriceResult } from '@/types/wine'
+import { getBottleSize, getBottleSizeSearchTerm } from '@/lib/bottle-sizes'
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || '')
 
 /**
  * Main function to get wine price from multiple sources
  * Priority: Vivino Scraping > Google + Gemini estimation
+ * Now includes bottle size for accurate pricing (magnums, etc.)
  */
 export async function getWinePrice(
   chateau: string,
   vintage?: number | null,
-  region?: string | null
+  region?: string | null,
+  bottleSize: string = 'standard'
 ): Promise<PriceResult> {
-  const searchQuery = buildSearchQuery(chateau, vintage, region)
+  const searchQuery = buildSearchQuery(chateau, vintage, region, bottleSize)
+  const bottleSizeInfo = getBottleSize(bottleSize)
 
   // Try Vivino first (free, no API key needed)
   try {
@@ -27,7 +31,7 @@ export async function getWinePrice(
 
   // Fallback: Use Gemini to estimate price based on wine knowledge
   try {
-    const geminiResult = await estimatePriceWithGemini(chateau, vintage, region)
+    const geminiResult = await estimatePriceWithGemini(chateau, vintage, region, bottleSize)
     if (geminiResult.price_avg) {
       return geminiResult
     }
@@ -45,7 +49,12 @@ export async function getWinePrice(
   }
 }
 
-function buildSearchQuery(chateau: string, vintage?: number | null, region?: string | null): string {
+function buildSearchQuery(
+  chateau: string,
+  vintage?: number | null,
+  region?: string | null,
+  bottleSize: string = 'standard'
+): string {
   let query = chateau
   if (vintage) {
     query += ` ${vintage}`
@@ -53,6 +62,13 @@ function buildSearchQuery(chateau: string, vintage?: number | null, region?: str
   if (region) {
     query += ` ${region}`
   }
+
+  // Add bottle size term for non-standard sizes
+  const sizeSearchTerm = getBottleSizeSearchTerm(bottleSize)
+  if (sizeSearchTerm) {
+    query += ` ${sizeSearchTerm}`
+  }
+
   return query.trim()
 }
 
@@ -149,13 +165,16 @@ async function scrapeVivinoPrice(query: string): Promise<PriceResult> {
 
 /**
  * Use Gemini to estimate wine price based on its knowledge
+ * Now includes bottle size for accurate pricing
  */
 async function estimatePriceWithGemini(
   chateau: string,
   vintage?: number | null,
-  region?: string | null
+  region?: string | null,
+  bottleSize: string = 'standard'
 ): Promise<PriceResult> {
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+  const sizeInfo = getBottleSize(bottleSize)
 
   const wineDescription = [
     chateau,
@@ -163,11 +182,15 @@ async function estimatePriceWithGemini(
     region ? `from ${region}` : '',
   ].filter(Boolean).join(', ')
 
+  const bottleSizeNote = sizeInfo && sizeInfo.id !== 'standard'
+    ? `\n\nIMPORTANT: This is a ${sizeInfo.name} (${sizeInfo.volume}) bottle, which is ${sizeInfo.equivalent}x the size of a standard 750ml bottle. Large format bottles typically command a premium of 2-3x per liter compared to standard bottles due to rarity, better aging potential, and collectibility. Adjust your price estimate accordingly.`
+    : ''
+
   const prompt = `You are a wine expert. Estimate the retail price in EUR for this wine:
-${wineDescription}
+${wineDescription}${bottleSizeNote}
 
 Based on your knowledge of wine prices, provide a realistic price estimate.
-Consider the producer's reputation, the region, the vintage quality, and typical market prices.
+Consider the producer's reputation, the region, the vintage quality, typical market prices, and the bottle format.
 
 Return ONLY valid JSON (no markdown, no code blocks, just the JSON object):
 {

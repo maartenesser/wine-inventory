@@ -11,9 +11,10 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ArrowLeft, Save, Loader2, Wine, Trash2, MapPin } from 'lucide-react'
+import { ArrowLeft, Save, Loader2, Wine, Trash2, MapPin, GlassWater } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Wine as WineType } from '@/types/wine'
+import { BOTTLE_SIZES, getBottleSize } from '@/lib/bottle-sizes'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,6 +52,7 @@ export default function WineDetailPage({ params }: { params: Promise<{ id: strin
     grape_variety: '',
     color: '',
     alcohol_pct: '',
+    bottle_size: 'standard',
     quantity: 1,
     price_avg: '',
     location_id: '',
@@ -82,6 +84,7 @@ export default function WineDetailPage({ params }: { params: Promise<{ id: strin
           grape_variety: data.wine.grape_variety || '',
           color: data.wine.color || '',
           alcohol_pct: data.wine.alcohol_pct?.toString() || '',
+          bottle_size: data.wine.bottle_size || 'standard',
           quantity: data.wine.quantity || 1,
           price_avg: data.wine.price_avg?.toString() || '',
           location_id: data.wine.location_id || '',
@@ -146,6 +149,7 @@ export default function WineDetailPage({ params }: { params: Promise<{ id: strin
           grape_variety: formData.grape_variety || null,
           color: formData.color || null,
           alcohol_pct: formData.alcohol_pct ? parseFloat(formData.alcohol_pct) : null,
+          bottle_size: formData.bottle_size || 'standard',
           quantity: formData.quantity,
           price_avg: formData.price_avg ? parseFloat(formData.price_avg) : null,
           location_id: formData.location_id || null,
@@ -403,7 +407,22 @@ export default function WineDetailPage({ params }: { params: Promise<{ id: strin
                 <CardDescription>Stock and pricing</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="bottle_size">Bottle Size</Label>
+                    <Select value={formData.bottle_size} onValueChange={(v) => handleChange('bottle_size', v)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {BOTTLE_SIZES.map((size) => (
+                          <SelectItem key={size.id} value={size.id}>
+                            {size.name} ({size.volume})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="quantity">Quantity</Label>
                     <Input

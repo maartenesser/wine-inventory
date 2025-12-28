@@ -10,9 +10,10 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ImageUpload } from '@/components/camera/ImageUpload'
-import { ArrowLeft, Check, Loader2, Wine, Plus, Minus, Euro, MapPin } from 'lucide-react'
+import { ArrowLeft, Check, Loader2, Wine, Plus, Minus, Euro, MapPin, GlassWater } from 'lucide-react'
 import { toast } from 'sonner'
 import type { GeminiWineExtraction, PriceResult } from '@/types/wine'
+import { BOTTLE_SIZES, getBottleSize, type BottleSize } from '@/lib/bottle-sizes'
 
 interface Location {
   id: string
@@ -48,6 +49,7 @@ export default function ScanPage() {
     price: PriceResult | null
   } | null>(null)
   const [quantity, setQuantity] = useState(1)
+  const [bottleSize, setBottleSize] = useState<string>('standard')
   const [manualPrice, setManualPrice] = useState('')
   const [locations, setLocations] = useState<Location[]>([])
   const [selectedLocation, setSelectedLocation] = useState<string>('')
@@ -162,6 +164,7 @@ export default function ScanPage() {
 
       const formData = new FormData()
       formData.append('image', file)
+      formData.append('bottle_size', bottleSize)
 
       const response = await fetch('/api/scan', {
         method: 'POST',
@@ -214,6 +217,7 @@ export default function ScanPage() {
           grape_variety: scanResult.wine.grape_variety,
           color: scanResult.wine.color,
           alcohol_pct: scanResult.wine.alcohol_pct,
+          bottle_size: bottleSize,
           quantity,
           price_avg: priceAvg,
           price_min: scanResult.price?.price_min,
@@ -280,10 +284,75 @@ export default function ScanPage() {
       {/* Main content */}
       <main className="container mx-auto px-4 py-6 max-w-2xl">
         <div className="space-y-6">
+          {/* Bottle size selection */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <GlassWater className="h-5 w-5" />
+                1. Select Bottle Size
+              </CardTitle>
+              <CardDescription>
+                Choose the bottle size before scanning - this affects the price lookup
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {BOTTLE_SIZES.slice(0, 6).map((size) => (
+                  <button
+                    key={size.id}
+                    onClick={() => setBottleSize(size.id)}
+                    className={`p-3 rounded-lg border-2 text-left transition-colors ${
+                      bottleSize === size.id
+                        ? 'border-primary bg-primary/10'
+                        : 'border-muted hover:border-primary/50'
+                    }`}
+                  >
+                    <p className="font-medium text-sm">{size.name}</p>
+                    <p className="text-xs text-muted-foreground">{size.volume}</p>
+                  </button>
+                ))}
+              </div>
+              {/* Show more sizes in a dropdown for rare formats */}
+              {BOTTLE_SIZES.length > 6 && (
+                <div className="mt-3">
+                  <Select value={bottleSize} onValueChange={setBottleSize}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Or select a larger format..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {BOTTLE_SIZES.map((size) => (
+                        <SelectItem key={size.id} value={size.id}>
+                          <div className="flex justify-between items-center w-full">
+                            <span>{size.name}</span>
+                            <span className="text-muted-foreground ml-2">({size.volume})</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {/* Show selected bottle info */}
+              {bottleSize && getBottleSize(bottleSize) && (
+                <div className="mt-3 p-3 bg-muted/50 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">{getBottleSize(bottleSize)?.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {getBottleSize(bottleSize)?.description}
+                      </p>
+                    </div>
+                    <Badge variant="secondary">{getBottleSize(bottleSize)?.volume}</Badge>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Image upload */}
           <Card>
             <CardHeader>
-              <CardTitle>1. Capture Wine Label</CardTitle>
+              <CardTitle>2. Capture Wine Label</CardTitle>
               <CardDescription>
                 Take a photo or upload an image of the wine bottle label
               </CardDescription>
@@ -299,7 +368,7 @@ export default function ScanPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Check className="h-5 w-5 text-green-500" />
-                  2. Review Wine Details
+                  3. Review Wine Details
                 </CardTitle>
                 <CardDescription>
                   Verify the extracted information and adjust if needed
@@ -320,7 +389,7 @@ export default function ScanPage() {
                     </div>
                   )}
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-3 gap-4">
                     {scanResult.wine.vintage && (
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">Vintage</label>
@@ -333,6 +402,10 @@ export default function ScanPage() {
                         <div className="mt-1">{getColorBadge(scanResult.wine.color)}</div>
                       </div>
                     )}
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Bottle Size</label>
+                      <p className="font-semibold">{getBottleSize(bottleSize)?.volume || '750ml'}</p>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
