@@ -13,23 +13,65 @@ interface ImageUploadProps {
 export function ImageUpload({ onImageCapture, isLoading }: ImageUploadProps) {
   const [preview, setPreview] = useState<string | null>(null)
   const [dragActive, setDragActive] = useState(false)
+  const [isConverting, setIsConverting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
 
-  const handleFile = useCallback((file: File) => {
-    if (!file.type.startsWith('image/')) {
+  const convertHeicToJpeg = async (file: File): Promise<File> => {
+    // Check if it's a HEIC file
+    const isHeic = file.type === 'image/heic' ||
+                   file.type === 'image/heif' ||
+                   file.name.toLowerCase().endsWith('.heic') ||
+                   file.name.toLowerCase().endsWith('.heif')
+
+    if (!isHeic) {
+      return file
+    }
+
+    setIsConverting(true)
+    try {
+      // Dynamically import heic2any to avoid SSR issues
+      const heic2any = (await import('heic2any')).default
+      const convertedBlob = await heic2any({
+        blob: file,
+        toType: 'image/jpeg',
+        quality: 0.9
+      })
+
+      // heic2any can return an array or single blob
+      const blob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob
+      const convertedFile = new File(
+        [blob],
+        file.name.replace(/\.heic$/i, '.jpg').replace(/\.heif$/i, '.jpg'),
+        { type: 'image/jpeg' }
+      )
+      return convertedFile
+    } catch (error) {
+      console.error('Failed to convert HEIC:', error)
+      // Return original file if conversion fails
+      return file
+    } finally {
+      setIsConverting(false)
+    }
+  }
+
+  const handleFile = useCallback(async (file: File) => {
+    if (!file.type.startsWith('image/') && !file.name.toLowerCase().endsWith('.heic') && !file.name.toLowerCase().endsWith('.heif')) {
       alert('Please select an image file')
       return
     }
+
+    // Convert HEIC to JPEG if needed
+    const processedFile = await convertHeicToJpeg(file)
 
     // Create preview
     const reader = new FileReader()
     reader.onloadend = () => {
       setPreview(reader.result as string)
     }
-    reader.readAsDataURL(file)
+    reader.readAsDataURL(processedFile)
 
-    onImageCapture(file)
+    onImageCapture(processedFile)
   }, [onImageCapture])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -77,11 +119,11 @@ export function ImageUpload({ onImageCapture, isLoading }: ImageUploadProps) {
                 alt="Wine bottle preview"
                 className="w-full rounded-lg object-contain max-h-96"
               />
-              {isLoading && (
+              {(isLoading || isConverting) && (
                 <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
                   <div className="text-center text-white">
                     <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
-                    <p>Analyzing wine label...</p>
+                    <p>{isConverting ? 'Converting image...' : 'Analyzing wine label...'}</p>
                   </div>
                 </div>
               )}

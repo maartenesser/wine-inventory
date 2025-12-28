@@ -6,12 +6,18 @@ import { Button } from '@/components/ui/button'
 import { SummaryCards } from '@/components/dashboard/SummaryCards'
 import { WineTable } from '@/components/dashboard/WineTable'
 import { Separator } from '@/components/ui/separator'
-import { Camera, Download, RefreshCw, Wine } from 'lucide-react'
+import { Camera, Download, RefreshCw, Wine, Globe } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Wine as WineType, DashboardStats } from '@/types/wine'
 
+interface Location {
+  id: string
+  name: string
+}
+
 export default function DashboardPage() {
   const [wines, setWines] = useState<WineType[]>([])
+  const [locations, setLocations] = useState<Location[]>([])
   const [stats, setStats] = useState<DashboardStats>({
     totalWines: 0,
     totalBottles: 0,
@@ -22,6 +28,18 @@ export default function DashboardPage() {
     recentAdditions: [],
   })
   const [isLoading, setIsLoading] = useState(true)
+
+  const fetchLocations = useCallback(async () => {
+    try {
+      const response = await fetch('/api/locations')
+      const data = await response.json()
+      if (data.locations) {
+        setLocations(data.locations)
+      }
+    } catch (error) {
+      console.error('Error fetching locations:', error)
+    }
+  }, [])
 
   const fetchWines = useCallback(async () => {
     try {
@@ -91,7 +109,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchWines()
-  }, [fetchWines])
+    fetchLocations()
+  }, [fetchWines, fetchLocations])
 
   const handleUpdateQuantity = async (id: string, quantity: number) => {
     try {
@@ -185,6 +204,12 @@ export default function DashboardPage() {
                 <Download className="h-4 w-4 mr-2" />
                 Export
               </Button>
+              <Link href="/map">
+                <Button variant="outline" size="sm">
+                  <Globe className="h-4 w-4 mr-2" />
+                  Map
+                </Button>
+              </Link>
               <Link href="/scan">
                 <Button size="sm">
                   <Camera className="h-4 w-4 mr-2" />
@@ -210,6 +235,7 @@ export default function DashboardPage() {
           </div>
           <WineTable
             wines={wines}
+            locations={locations}
             onUpdateQuantity={handleUpdateQuantity}
             onDelete={handleDelete}
           />

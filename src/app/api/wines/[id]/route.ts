@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase'
+import type { Database } from '@/types/database'
+
+type WineUpdate = Database['public']['Tables']['wines']['Update']
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -11,8 +14,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const { id } = await params
     const supabase = createServerSupabaseClient()
 
-    const { data, error } = await supabase
-      .from('wines')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase
+      .from('wines') as any)
       .select('*')
       .eq('id', id)
       .single()
@@ -49,22 +53,24 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const supabase = createServerSupabaseClient()
 
     // Only include fields that are provided
-    const updates: Record<string, unknown> = {}
+    const updates: WineUpdate = {}
     const allowedFields = [
       'chateau', 'wine_name', 'vintage', 'region', 'appellation',
       'country', 'grape_variety', 'color', 'alcohol_pct', 'quantity',
       'price_min', 'price_max', 'price_avg', 'price_source', 'currency',
-      'image_url', 'food_pairing', 'tasting_notes'
-    ]
+      'image_url', 'image_data', 'location_id', 'food_pairing', 'tasting_notes',
+      'winemaker_info', 'drinking_window'
+    ] as const
 
     for (const field of allowedFields) {
       if (body[field] !== undefined) {
-        updates[field] = body[field]
+        (updates as Record<string, unknown>)[field] = body[field]
       }
     }
 
-    const { data, error } = await supabase
-      .from('wines')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase
+      .from('wines') as any)
       .update(updates)
       .eq('id', id)
       .select()
@@ -100,8 +106,9 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const { id } = await params
     const supabase = createServerSupabaseClient()
 
-    const { error } = await supabase
-      .from('wines')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase
+      .from('wines') as any)
       .delete()
       .eq('id', id)
 

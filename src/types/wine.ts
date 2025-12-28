@@ -16,8 +16,13 @@ export interface Wine {
   price_source: 'wine-searcher' | 'vivino' | 'google' | 'manual' | null
   currency: string
   image_url: string | null
+  image_data: string | null
+  location_id: string | null
+  locations: { id: string; name: string } | null
   food_pairing: string[] | null
   tasting_notes: string | null
+  winemaker_info: string | null
+  drinking_window: string | null
   created_at: string
   updated_at: string
 }
@@ -47,6 +52,10 @@ export interface GeminiWineExtraction {
   grape_variety: string | null
   color: 'red' | 'white' | 'rosé' | 'sparkling' | null
   alcohol_pct: number | null
+  winemaker_info: string | null
+  food_pairing: string[] | null
+  tasting_notes: string | null
+  drinking_window: string | null
   confidence: {
     chateau: number
     vintage: number

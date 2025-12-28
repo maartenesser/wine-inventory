@@ -1,14 +1,18 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase'
+import type { Database } from '@/types/database'
 import * as XLSX from 'xlsx'
+
+type Wine = Database['public']['Tables']['wines']['Row']
 
 // GET /api/export - Export wines to Excel
 export async function GET() {
   try {
     const supabase = createServerSupabaseClient()
 
-    const { data: wines, error } = await supabase
-      .from('wines')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase
+      .from('wines') as any)
       .select('*')
       .order('chateau', { ascending: true })
 
@@ -19,6 +23,8 @@ export async function GET() {
         { status: 500 }
       )
     }
+
+    const wines = (data || []) as Wine[]
 
     // Transform data for Excel
     const excelData = wines.map((wine) => ({

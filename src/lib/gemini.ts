@@ -3,7 +3,7 @@ import type { GeminiWineExtraction } from '@/types/wine'
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || '')
 
-const WINE_EXTRACTION_PROMPT = `Analyze this wine bottle label image and extract the following information.
+const WINE_EXTRACTION_PROMPT = `Analyze this wine bottle label image and extract comprehensive wine information.
 Return ONLY valid JSON with these fields (no markdown, no code blocks, just the JSON object):
 
 {
@@ -13,9 +13,13 @@ Return ONLY valid JSON with these fields (no markdown, no code blocks, just the 
   "region": "Wine region (e.g., Bordeaux, Burgundy, Napa Valley, Rioja)",
   "appellation": "Specific appellation (e.g., Saint-Émilion Grand Cru, Pauillac)",
   "country": "Country of origin",
-  "grape_variety": "Primary grape(s) if visible (e.g., Cabernet Sauvignon, Merlot)",
+  "grape_variety": "Primary grape(s) - if not visible, infer from region (e.g., Bordeaux = Cabernet Sauvignon/Merlot blend)",
   "color": "red or white or rosé or sparkling",
   "alcohol_pct": 13.5,
+  "winemaker_info": "Brief description of the château/winery - its history, reputation, style (2-3 sentences)",
+  "food_pairing": ["grilled lamb", "aged cheese", "beef stew"],
+  "tasting_notes": "Expected taste profile - body, tannins, fruit notes, finish",
+  "drinking_window": "e.g., 2024-2030 or 'Drink now'",
   "confidence": {
     "chateau": 0.95,
     "vintage": 0.90,
@@ -25,12 +29,15 @@ Return ONLY valid JSON with these fields (no markdown, no code blocks, just the 
 
 IMPORTANT:
 - Focus on accuracy for chateau/producer name and vintage year - these are the most critical fields
-- If a field is not visible or unclear, set it to null
-- For vintage, only include if you can clearly read the year on the label
+- For grape_variety: if not visible on label, infer from region (e.g., Burgundy red = Pinot Noir, Bordeaux = Cab/Merlot)
+- For winemaker_info: use your knowledge of the producer to provide context
+- For food_pairing: suggest 3-5 specific dishes that pair well
+- For tasting_notes: describe what someone would expect when drinking this wine
+- If a field is not visible AND cannot be inferred, set it to null
 - Return ONLY the JSON object, no additional text or formatting`
 
 export async function extractWineFromImage(imageBase64: string, mimeType: string = 'image/jpeg'): Promise<GeminiWineExtraction> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
   try {
     const result = await model.generateContent([
@@ -98,7 +105,7 @@ export async function getFoodPairings(wine: {
   cheese: string[]
   vegetarian: string[]
 }> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
   const prompt = FOOD_PAIRING_PROMPT
     .replace('{chateau}', wine.chateau || '')

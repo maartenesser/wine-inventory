@@ -28,6 +28,8 @@ export interface Database {
           price_source: string | null
           currency: string
           image_url: string | null
+          image_data: string | null
+          location_id: string | null
           food_pairing: Json | null
           tasting_notes: string | null
           created_at: string
@@ -51,6 +53,8 @@ export interface Database {
           price_source?: string | null
           currency?: string
           image_url?: string | null
+          image_data?: string | null
+          location_id?: string | null
           food_pairing?: Json | null
           tasting_notes?: string | null
           created_at?: string
@@ -74,9 +78,30 @@ export interface Database {
           price_source?: string | null
           currency?: string
           image_url?: string | null
+          image_data?: string | null
+          location_id?: string | null
           food_pairing?: Json | null
           tasting_notes?: string | null
           updated_at?: string
+        }
+      }
+      locations: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
         }
       }
       price_history: {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -8,10 +8,36 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ImageUpload } from '@/components/camera/ImageUpload'
-import { ArrowLeft, Check, Loader2, Wine, Plus, Minus, Euro } from 'lucide-react'
+import { ArrowLeft, Check, Loader2, Wine, Plus, Minus, Euro, MapPin } from 'lucide-react'
 import { toast } from 'sonner'
 import type { GeminiWineExtraction, PriceResult } from '@/types/wine'
+
+interface Location {
+  id: string
+  name: string
+  description: string | null
+}
+
+// Coordinates for known locations
+const LOCATION_COORDINATES: Record<string, { lat: number; lng: number }> = {
+  'Verbier': { lat: 46.0967, lng: 7.2286 },
+  'Constance': { lat: 47.6633, lng: 9.1769 },
+  'Brussels': { lat: 50.8503, lng: 4.3517 },
+  'Amsterdam': { lat: 52.3676, lng: 4.9041 },
+}
+
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371 // Earth's radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLon = (lon2 - lon1) * Math.PI / 180
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon/2) * Math.sin(dLon/2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+  return R * c
+}
 
 export default function ScanPage() {
   const router = useRouter()
@@ -23,12 +49,117 @@ export default function ScanPage() {
   } | null>(null)
   const [quantity, setQuantity] = useState(1)
   const [manualPrice, setManualPrice] = useState('')
+  const [locations, setLocations] = useState<Location[]>([])
+  const [selectedLocation, setSelectedLocation] = useState<string>('')
+  const [newLocationName, setNewLocationName] = useState('')
+  const [isAddingLocation, setIsAddingLocation] = useState(false)
+  const [capturedImageData, setCapturedImageData] = useState<string | null>(null)
+
+  // Fetch locations and detect nearest one on mount
+  useEffect(() => {
+    fetchLocations()
+    detectNearestLocation()
+  }, [])
+
+  const detectNearestLocation = () => {
+    if (!navigator.geolocation) return
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const userLat = position.coords.latitude
+        const userLng = position.coords.longitude
+
+        // Find nearest location
+        let nearestLocation = ''
+        let minDistance = Infinity
+
+        for (const [name, coords] of Object.entries(LOCATION_COORDINATES)) {
+          const distance = calculateDistance(userLat, userLng, coords.lat, coords.lng)
+          if (distance < minDistance) {
+            minDistance = distance
+            nearestLocation = name
+          }
+        }
+
+        // Set the nearest location after locations are loaded
+        if (nearestLocation) {
+          // Store it to apply after locations load
+          setNearestLocationName(nearestLocation)
+        }
+      },
+      (error) => {
+        console.log('Geolocation not available:', error.message)
+      },
+      { timeout: 5000, enableHighAccuracy: false }
+    )
+  }
+
+  const [nearestLocationName, setNearestLocationName] = useState<string>('')
+
+  // Auto-select nearest location when both are available
+  useEffect(() => {
+    if (nearestLocationName && locations.length > 0 && !selectedLocation) {
+      const matchingLocation = locations.find(loc => loc.name === nearestLocationName)
+      if (matchingLocation) {
+        setSelectedLocation(matchingLocation.id)
+        toast.success(`Auto-selected ${nearestLocationName} based on your location`)
+      }
+    }
+  }, [nearestLocationName, locations, selectedLocation])
+
+  const fetchLocations = async () => {
+    try {
+      const response = await fetch('/api/locations')
+      const data = await response.json()
+      if (data.locations) {
+        setLocations(data.locations)
+      }
+    } catch (error) {
+      console.error('Failed to fetch locations:', error)
+    }
+  }
+
+  const handleAddLocation = async () => {
+    if (!newLocationName.trim()) return
+
+    setIsAddingLocation(true)
+    try {
+      const response = await fetch('/api/locations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newLocationName.trim() }),
+      })
+
+      const data = await response.json()
+      if (data.location) {
+        setLocations([...locations, data.location])
+        setSelectedLocation(data.location.id)
+        setNewLocationName('')
+        toast.success('Location added!')
+      }
+    } catch (error) {
+      console.error('Failed to add location:', error)
+      toast.error('Failed to add location')
+    } finally {
+      setIsAddingLocation(false)
+    }
+  }
 
   const handleImageCapture = async (file: File) => {
     setIsScanning(true)
     setScanResult(null)
 
     try {
+      // Convert file to base64 for storage
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        const base64 = reader.result as string
+        // Remove the data:image/xxx;base64, prefix for storage
+        const base64Data = base64.split(',')[1]
+        setCapturedImageData(base64Data)
+      }
+      reader.readAsDataURL(file)
+
       const formData = new FormData()
       formData.append('image', file)
 
@@ -88,6 +219,12 @@ export default function ScanPage() {
           price_min: scanResult.price?.price_min,
           price_max: scanResult.price?.price_max,
           price_source: priceAvg ? (scanResult.price?.source || 'manual') : null,
+          location_id: selectedLocation || null,
+          image_data: capturedImageData,
+          food_pairing: scanResult.wine.food_pairing,
+          tasting_notes: scanResult.wine.tasting_notes,
+          winemaker_info: scanResult.wine.winemaker_info,
+          drinking_window: scanResult.wine.drinking_window,
         }),
       })
 
@@ -219,6 +356,38 @@ export default function ScanPage() {
                       <p>{scanResult.wine.grape_variety}</p>
                     </div>
                   )}
+
+                  {scanResult.wine.winemaker_info && (
+                    <div className="bg-muted/50 rounded-lg p-3">
+                      <label className="text-sm font-medium text-muted-foreground">About the Producer</label>
+                      <p className="text-sm mt-1">{scanResult.wine.winemaker_info}</p>
+                    </div>
+                  )}
+
+                  {scanResult.wine.tasting_notes && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Tasting Notes</label>
+                      <p className="text-sm">{scanResult.wine.tasting_notes}</p>
+                    </div>
+                  )}
+
+                  {scanResult.wine.food_pairing && scanResult.wine.food_pairing.length > 0 && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Food Pairing</label>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {scanResult.wine.food_pairing.map((food, idx) => (
+                          <Badge key={idx} variant="secondary">{food}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {scanResult.wine.drinking_window && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Best Drinking Window</label>
+                      <p className="text-sm font-medium">{scanResult.wine.drinking_window}</p>
+                    </div>
+                  )}
                 </div>
 
                 <Separator />
@@ -272,6 +441,51 @@ export default function ScanPage() {
                       <Plus className="h-4 w-4" />
                     </Button>
                     <span className="text-sm text-muted-foreground ml-2">bottles</span>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Location */}
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                    <MapPin className="h-4 w-4" />
+                    Storage Location
+                  </label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Select value={selectedLocation} onValueChange={setSelectedLocation}>
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Select location..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {locations.map((location) => (
+                          <SelectItem key={location.id} value={location.id}>
+                            {location.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center gap-2 mt-2">
+                    <Input
+                      placeholder="Add new location..."
+                      value={newLocationName}
+                      onChange={(e) => setNewLocationName(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddLocation()}
+                      className="flex-1"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAddLocation}
+                      disabled={isAddingLocation || !newLocationName.trim()}
+                    >
+                      {isAddingLocation ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Plus className="h-4 w-4" />
+                      )}
+                    </Button>
                   </div>
                 </div>
 

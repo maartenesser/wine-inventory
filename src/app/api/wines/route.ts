@@ -7,9 +7,10 @@ export async function GET() {
   try {
     const supabase = createServerSupabaseClient()
 
-    const { data, error } = await supabase
-      .from('wines')
-      .select('*')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase
+      .from('wines') as any)
+      .select('*, locations(id, name)')
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -54,12 +55,17 @@ export async function POST(request: NextRequest) {
       price_source: body.price_source || null,
       currency: body.currency || 'EUR',
       image_url: body.image_url || null,
+      image_data: body.image_data || null,
+      location_id: body.location_id || null,
       food_pairing: body.food_pairing || null,
       tasting_notes: body.tasting_notes || null,
+      winemaker_info: body.winemaker_info || null,
+      drinking_window: body.drinking_window || null,
     }
 
-    const { data, error } = await supabase
-      .from('wines')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase
+      .from('wines') as any)
       .insert(wine)
       .select()
       .single()

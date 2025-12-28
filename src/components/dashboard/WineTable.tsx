@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   Table,
   TableBody,
@@ -20,29 +21,53 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Trash2, Plus, Minus, Search } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Trash2, Plus, Minus, Search, MapPin, Wine as WineIcon, Pencil } from 'lucide-react'
 import type { Wine } from '@/types/wine'
+
+interface Location {
+  id: string
+  name: string
+}
 
 interface WineTableProps {
   wines: Wine[]
+  locations?: Location[]
   onUpdateQuantity: (id: string, quantity: number) => void
   onDelete: (id: string) => void
 }
 
-export function WineTable({ wines, onUpdateQuantity, onDelete }: WineTableProps) {
+export function WineTable({ wines, locations = [], onUpdateQuantity, onDelete }: WineTableProps) {
+  const router = useRouter()
   const [searchTerm, setSearchTerm] = useState('')
+  const [locationFilter, setLocationFilter] = useState<string>('all')
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; wine: Wine | null }>({
     open: false,
     wine: null,
   })
 
   const filteredWines = wines.filter((wine) => {
+    // Location filter
+    if (locationFilter !== 'all') {
+      if (!wine.location_id || wine.location_id !== locationFilter) {
+        return false
+      }
+    }
+
+    // Search filter
     const search = searchTerm.toLowerCase()
     return (
       wine.chateau.toLowerCase().includes(search) ||
       wine.region?.toLowerCase().includes(search) ||
       wine.vintage?.toString().includes(search) ||
-      wine.grape_variety?.toLowerCase().includes(search)
+      wine.grape_variety?.toLowerCase().includes(search) ||
+      wine.locations?.name?.toLowerCase().includes(search)
     )
   })
 
@@ -78,9 +103,9 @@ export function WineTable({ wines, onUpdateQuantity, onDelete }: WineTableProps)
 
   return (
     <div className="space-y-4">
-      {/* Search */}
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1 max-w-sm">
+      {/* Search and Filter */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        <div className="relative flex-1 max-w-sm w-full">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search wines..."
@@ -89,7 +114,23 @@ export function WineTable({ wines, onUpdateQuantity, onDelete }: WineTableProps)
             className="pl-10"
           />
         </div>
-        <span className="text-sm text-muted-foreground">
+        {locations.length > 0 && (
+          <Select value={locationFilter} onValueChange={setLocationFilter}>
+            <SelectTrigger className="w-[180px]">
+              <MapPin className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="All locations" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All locations</SelectItem>
+              {locations.map((location) => (
+                <SelectItem key={location.id} value={location.id}>
+                  {location.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        <span className="text-sm text-muted-foreground whitespace-nowrap">
           {filteredWines.length} of {wines.length} wines
         </span>
       </div>
@@ -99,7 +140,8 @@ export function WineTable({ wines, onUpdateQuantity, onDelete }: WineTableProps)
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[250px]">Wine</TableHead>
+              <TableHead className="w-[60px]"></TableHead>
+              <TableHead className="w-[220px]">Wine</TableHead>
               <TableHead>Region</TableHead>
               <TableHead>Vintage</TableHead>
               <TableHead>Color</TableHead>
@@ -112,7 +154,7 @@ export function WineTable({ wines, onUpdateQuantity, onDelete }: WineTableProps)
           <TableBody>
             {filteredWines.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                   {wines.length === 0
                     ? 'No wines in your collection yet. Scan a bottle to get started!'
                     : 'No wines match your search.'}
@@ -121,6 +163,19 @@ export function WineTable({ wines, onUpdateQuantity, onDelete }: WineTableProps)
             ) : (
               filteredWines.map((wine) => (
                 <TableRow key={wine.id}>
+                  <TableCell className="p-2">
+                    {wine.image_data ? (
+                      <img
+                        src={`data:image/jpeg;base64,${wine.image_data}`}
+                        alt={wine.chateau}
+                        className="w-12 h-12 object-cover rounded-md"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 bg-muted rounded-md flex items-center justify-center">
+                        <WineIcon className="h-6 w-6 text-muted-foreground" />
+                      </div>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <div>
                       <div className="font-medium">{wine.chateau}</div>
@@ -129,6 +184,12 @@ export function WineTable({ wines, onUpdateQuantity, onDelete }: WineTableProps)
                       )}
                       {wine.grape_variety && (
                         <div className="text-xs text-muted-foreground">{wine.grape_variety}</div>
+                      )}
+                      {wine.locations && (
+                        <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                          <MapPin className="h-3 w-3" />
+                          {wine.locations.name}
+                        </div>
                       )}
                     </div>
                   </TableCell>
@@ -174,14 +235,24 @@ export function WineTable({ wines, onUpdateQuantity, onDelete }: WineTableProps)
                     {formatCurrency(wine.price_avg ? wine.price_avg * wine.quantity : null)}
                   </TableCell>
                   <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive"
-                      onClick={() => setDeleteDialog({ open: true, wine })}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => router.push(`/wines/${wine.id}`)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        onClick={() => setDeleteDialog({ open: true, wine })}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
