@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -9,16 +9,28 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ImageUpload } from '@/components/camera/ImageUpload'
-import { ArrowLeft, Check, Loader2, Wine, Plus, Minus, Euro, MapPin, GlassWater } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
+import { ImageUpload, type ImageUploadRef } from '@/components/camera/ImageUpload'
+import { ArrowLeft, Check, Loader2, Wine, Plus, Minus, Euro, MapPin, GlassWater, Camera, Zap, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import type { GeminiWineExtraction, PriceResult } from '@/types/wine'
-import { BOTTLE_SIZES, getBottleSize, type BottleSize } from '@/lib/bottle-sizes'
+import { BOTTLE_SIZES, getBottleSize } from '@/lib/bottle-sizes'
 
 interface Location {
   id: string
   name: string
   description: string | null
+}
+
+interface QuickWineResult {
+  chateau: string | null
+  wine_name: string | null
+  vintage: number | null
+  region: string | null
+  country: string | null
+  color: 'red' | 'white' | 'rosé' | 'sparkling' | null
+  grape_variety: string | null
+  appellation: string | null
 }
 
 // Coordinates for known locations
@@ -44,10 +56,12 @@ export default function ScanPage() {
   const router = useRouter()
   const [isScanning, setIsScanning] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [quickMode, setQuickMode] = useState(true) // Default to quick mode
   const [scanResult, setScanResult] = useState<{
     wine: GeminiWineExtraction
     price: PriceResult | null
   } | null>(null)
+  const [quickResult, setQuickResult] = useState<QuickWineResult | null>(null)
   const [quantity, setQuantity] = useState(1)
   const [bottleSize, setBottleSize] = useState<string>('standard')
   const [manualPrice, setManualPrice] = useState('')
@@ -56,6 +70,9 @@ export default function ScanPage() {
   const [newLocationName, setNewLocationName] = useState('')
   const [isAddingLocation, setIsAddingLocation] = useState(false)
   const [capturedImageData, setCapturedImageData] = useState<string | null>(null)
+  const [scanCount, setScanCount] = useState(0)
+  const [showScanNext, setShowScanNext] = useState(false)
+  const imageUploadRef = useRef<ImageUploadRef>(null)
 
   // Fetch locations and detect nearest one on mount
   useEffect(() => {
@@ -85,7 +102,6 @@ export default function ScanPage() {
 
         // Set the nearest location after locations are loaded
         if (nearestLocation) {
-          // Store it to apply after locations load
           setNearestLocationName(nearestLocation)
         }
       },
@@ -150,6 +166,8 @@ export default function ScanPage() {
   const handleImageCapture = async (file: File) => {
     setIsScanning(true)
     setScanResult(null)
+    setQuickResult(null)
+    setShowScanNext(false)
 
     try {
       // Convert file to base64 for storage
@@ -164,32 +182,120 @@ export default function ScanPage() {
 
       const formData = new FormData()
       formData.append('image', file)
-      formData.append('bottle_size', bottleSize)
 
-      const response = await fetch('/api/scan', {
-        method: 'POST',
-        body: formData,
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        setScanResult({
-          wine: data.wine,
-          price: data.price,
+      if (quickMode) {
+        // QUICK MODE: Fast OCR only, no price lookup
+        const response = await fetch('/api/scan-quick', {
+          method: 'POST',
+          body: formData,
         })
-        if (data.price?.price_avg) {
-          setManualPrice(data.price.price_avg.toString())
+
+        const data = await response.json()
+
+        if (data.success) {
+          setQuickResult(data.wine)
+          toast.success('Label scanned!', { duration: 1500 })
+        } else {
+          toast.error(data.error || 'Failed to scan label')
         }
-        toast.success('Wine label analyzed successfully!')
       } else {
-        toast.error(data.error || 'Failed to analyze wine label')
+        // FULL MODE: Complete extraction with price lookup
+        formData.append('bottle_size', bottleSize)
+
+        const response = await fetch('/api/scan', {
+          method: 'POST',
+          body: formData,
+        })
+
+        const data = await response.json()
+
+        if (data.success) {
+          setScanResult({
+            wine: data.wine,
+            price: data.price,
+          })
+          if (data.price?.price_avg) {
+            setManualPrice(data.price.price_avg.toString())
+          }
+          toast.success('Wine label analyzed successfully!')
+        } else {
+          toast.error(data.error || 'Failed to analyze wine label')
+        }
       }
     } catch (error) {
       console.error('Scan error:', error)
       toast.error('Failed to scan wine label')
     } finally {
       setIsScanning(false)
+    }
+  }
+
+  const handleQuickSave = async () => {
+    if (!quickResult?.chateau) {
+      toast.error('Wine name is required')
+      return
+    }
+
+    setIsSaving(true)
+
+    try {
+      const response = await fetch('/api/wines', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chateau: quickResult.chateau,
+          wine_name: quickResult.wine_name,
+          vintage: quickResult.vintage,
+          region: quickResult.region,
+          appellation: quickResult.appellation,
+          country: quickResult.country,
+          grape_variety: quickResult.grape_variety,
+          color: quickResult.color,
+          bottle_size: bottleSize,
+          quantity,
+          location_id: selectedLocation || null,
+          image_data: capturedImageData,
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+
+        // Trigger background enrichment (fire and forget)
+        if (data.wine?.id) {
+          fetch(`/api/wines/${data.wine.id}/enrich`, {
+            method: 'POST',
+          }).catch(err => console.log('Background enrichment started:', err))
+        }
+
+        setScanCount(prev => prev + 1)
+        toast.success(`Wine #${scanCount + 1} saved! Price lookup in progress...`)
+
+        // Show scan next button
+        setShowScanNext(true)
+      } else {
+        toast.error('Failed to save wine')
+      }
+    } catch (error) {
+      console.error('Save error:', error)
+      toast.error('Failed to save wine')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleScanNext = () => {
+    // Reset for next scan
+    setQuickResult(null)
+    setScanResult(null)
+    setCapturedImageData(null)
+    setManualPrice('')
+    setQuantity(1)
+    setShowScanNext(false)
+
+    // Reset the image upload component
+    if (imageUploadRef.current) {
+      imageUploadRef.current.reset()
     }
   }
 
@@ -266,17 +372,24 @@ export default function ScanPage() {
       {/* Header */}
       <header className="border-b">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Link href="/">
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
-              </Button>
-            </Link>
-            <div className="flex items-center gap-2">
-              <Wine className="h-6 w-6 text-primary" />
-              <h1 className="text-xl font-bold">Scan Wine</h1>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link href="/">
+                <Button variant="ghost" size="sm">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back
+                </Button>
+              </Link>
+              <div className="flex items-center gap-2">
+                <Wine className="h-6 w-6 text-primary" />
+                <h1 className="text-xl font-bold">Scan Wine</h1>
+              </div>
             </div>
+            {scanCount > 0 && (
+              <Badge variant="secondary" className="text-lg px-3 py-1">
+                {scanCount} scanned
+              </Badge>
+            )}
           </div>
         </div>
       </header>
@@ -284,91 +397,247 @@ export default function ScanPage() {
       {/* Main content */}
       <main className="container mx-auto px-4 py-6 max-w-2xl">
         <div className="space-y-6">
+          {/* Quick Mode Toggle */}
+          <Card className={quickMode ? 'border-primary bg-primary/5' : ''}>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Zap className={`h-5 w-5 ${quickMode ? 'text-primary' : 'text-muted-foreground'}`} />
+                  <div>
+                    <p className="font-medium">Quick Batch Mode</p>
+                    <p className="text-sm text-muted-foreground">
+                      Fast scanning for wine cellars - price lookup happens in background
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={quickMode}
+                  onCheckedChange={setQuickMode}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Bottle size selection */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
                 <GlassWater className="h-5 w-5" />
-                1. Select Bottle Size
+                1. Bottle Size
               </CardTitle>
-              <CardDescription>
-                Choose the bottle size before scanning - this affects the price lookup
-              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                 {BOTTLE_SIZES.slice(0, 6).map((size) => (
                   <button
                     key={size.id}
                     onClick={() => setBottleSize(size.id)}
-                    className={`p-3 rounded-lg border-2 text-left transition-colors ${
+                    className={`p-2 rounded-lg border-2 text-center transition-colors ${
                       bottleSize === size.id
                         ? 'border-primary bg-primary/10'
                         : 'border-muted hover:border-primary/50'
                     }`}
                   >
-                    <p className="font-medium text-sm">{size.name}</p>
+                    <p className="font-medium text-xs">{size.name.split(' ')[0]}</p>
                     <p className="text-xs text-muted-foreground">{size.volume}</p>
                   </button>
                 ))}
               </div>
               {/* Show more sizes in a dropdown for rare formats */}
               {BOTTLE_SIZES.length > 6 && (
-                <div className="mt-3">
-                  <Select value={bottleSize} onValueChange={setBottleSize}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Or select a larger format..." />
+                <Select value={bottleSize} onValueChange={setBottleSize}>
+                  <SelectTrigger className="w-full mt-2">
+                    <SelectValue placeholder="More sizes..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BOTTLE_SIZES.map((size) => (
+                      <SelectItem key={size.id} value={size.id}>
+                        {size.name} ({size.volume})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Location - only show if we have locations */}
+          {locations.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <MapPin className="h-5 w-5" />
+                  2. Storage Location
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2">
+                  <Select value={selectedLocation} onValueChange={setSelectedLocation}>
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Select location..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {BOTTLE_SIZES.map((size) => (
-                        <SelectItem key={size.id} value={size.id}>
-                          <div className="flex justify-between items-center w-full">
-                            <span>{size.name}</span>
-                            <span className="text-muted-foreground ml-2">({size.volume})</span>
-                          </div>
+                      {locations.map((location) => (
+                        <SelectItem key={location.id} value={location.id}>
+                          {location.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-              )}
-              {/* Show selected bottle info */}
-              {bottleSize && getBottleSize(bottleSize) && (
-                <div className="mt-3 p-3 bg-muted/50 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">{getBottleSize(bottleSize)?.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {getBottleSize(bottleSize)?.description}
-                      </p>
-                    </div>
-                    <Badge variant="secondary">{getBottleSize(bottleSize)?.volume}</Badge>
+                  <div className="flex items-center gap-1">
+                    <Input
+                      placeholder="New..."
+                      value={newLocationName}
+                      onChange={(e) => setNewLocationName(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddLocation()}
+                      className="w-24"
+                    />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={handleAddLocation}
+                      disabled={isAddingLocation || !newLocationName.trim()}
+                    >
+                      {isAddingLocation ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Plus className="h-4 w-4" />
+                      )}
+                    </Button>
                   </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
-          {/* Image upload */}
-          <Card>
-            <CardHeader>
-              <CardTitle>2. Capture Wine Label</CardTitle>
+          {/* Image upload - make it more prominent */}
+          <Card className="border-2 border-dashed">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Camera className="h-5 w-5" />
+                {locations.length > 0 ? '3.' : '2.'} Scan Label
+              </CardTitle>
               <CardDescription>
-                Take a photo or upload an image of the wine bottle label
+                {quickMode
+                  ? 'Quick scan - just reads the label (1-2 seconds)'
+                  : 'Full analysis with price lookup (may take longer)'}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ImageUpload onImageCapture={handleImageCapture} isLoading={isScanning} />
+              <ImageUpload
+                ref={imageUploadRef}
+                onImageCapture={handleImageCapture}
+                isLoading={isScanning}
+              />
             </CardContent>
           </Card>
 
-          {/* Scan results */}
-          {scanResult && (
+          {/* Quick scan results */}
+          {quickMode && quickResult && (
+            <Card className="border-green-500/50 bg-green-50/50 dark:bg-green-950/20">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2">
+                  <Check className="h-5 w-5 text-green-500" />
+                  Confirm & Save
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Wine info - compact */}
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xl font-bold truncate">{quickResult.chateau || 'Unknown'}</p>
+                    {quickResult.wine_name && (
+                      <p className="text-sm text-muted-foreground truncate">{quickResult.wine_name}</p>
+                    )}
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      {quickResult.vintage && (
+                        <Badge variant="outline">{quickResult.vintage}</Badge>
+                      )}
+                      {getColorBadge(quickResult.color)}
+                      {quickResult.region && (
+                        <span className="text-sm text-muted-foreground">{quickResult.region}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Quantity - prominent */}
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">How many bottles?</span>
+                  <div className="flex items-center gap-3">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-10 w-10"
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      disabled={quantity <= 1}
+                    >
+                      <Minus className="h-5 w-5" />
+                    </Button>
+                    <span className="w-12 text-center text-2xl font-bold">{quantity}</span>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-10 w-10"
+                      onClick={() => setQuantity(quantity + 1)}
+                    >
+                      <Plus className="h-5 w-5" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Action buttons */}
+                {showScanNext ? (
+                  <div className="flex gap-2">
+                    <Button
+                      className="flex-1"
+                      size="lg"
+                      onClick={handleScanNext}
+                    >
+                      <Camera className="h-5 w-5 mr-2" />
+                      Scan Next Bottle
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      onClick={() => router.push('/')}
+                    >
+                      Done
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    className="w-full"
+                    size="lg"
+                    onClick={handleQuickSave}
+                    disabled={isSaving || !quickResult.chateau}
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="h-5 w-5 mr-2" />
+                        Save & Continue
+                      </>
+                    )}
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Full scan results */}
+          {!quickMode && scanResult && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Check className="h-5 w-5 text-green-500" />
-                  3. Review Wine Details
+                  Review Wine Details
                 </CardTitle>
                 <CardDescription>
                   Verify the extracted information and adjust if needed
@@ -514,51 +783,6 @@ export default function ScanPage() {
                       <Plus className="h-4 w-4" />
                     </Button>
                     <span className="text-sm text-muted-foreground ml-2">bottles</span>
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Location */}
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                    <MapPin className="h-4 w-4" />
-                    Storage Location
-                  </label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Select value={selectedLocation} onValueChange={setSelectedLocation}>
-                      <SelectTrigger className="flex-1">
-                        <SelectValue placeholder="Select location..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {locations.map((location) => (
-                          <SelectItem key={location.id} value={location.id}>
-                            {location.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex items-center gap-2 mt-2">
-                    <Input
-                      placeholder="Add new location..."
-                      value={newLocationName}
-                      onChange={(e) => setNewLocationName(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleAddLocation()}
-                      className="flex-1"
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleAddLocation}
-                      disabled={isAddingLocation || !newLocationName.trim()}
-                    >
-                      {isAddingLocation ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Plus className="h-4 w-4" />
-                      )}
-                    </Button>
                   </div>
                 </div>
 

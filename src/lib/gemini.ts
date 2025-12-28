@@ -3,6 +3,79 @@ import type { GeminiWineExtraction } from '@/types/wine'
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || '')
 
+// Quick extraction result - only essential fields for fast scanning
+export interface QuickWineExtraction {
+  chateau: string | null
+  wine_name: string | null
+  vintage: number | null
+  region: string | null
+  country: string | null
+  color: 'red' | 'white' | 'rosé' | 'sparkling' | null
+  grape_variety: string | null
+  appellation: string | null
+}
+
+// FAST extraction prompt - only essential info, no background research
+const QUICK_EXTRACTION_PROMPT = `Look at this wine bottle label and extract ONLY the basic information visible on the label.
+Return ONLY valid JSON (no markdown, no code blocks):
+
+{
+  "chateau": "Producer/Chateau name from label",
+  "wine_name": "Wine name if different from chateau, otherwise null",
+  "vintage": 2020,
+  "region": "Wine region if visible",
+  "country": "Country if visible",
+  "color": "red or white or rosé or sparkling",
+  "grape_variety": "Grape variety if visible on label",
+  "appellation": "Appellation if visible"
+}
+
+IMPORTANT:
+- Only extract what you can clearly see on the label
+- Be fast - don't research or infer, just read the label
+- If something is not visible, set it to null
+- Focus on chateau and vintage - these are most important`
+
+/**
+ * FAST extraction - only reads the label, no additional research
+ * Use this for quick batch scanning
+ */
+export async function extractWineQuick(imageBase64: string, mimeType: string = 'image/jpeg'): Promise<QuickWineExtraction> {
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' }) // Use faster model
+
+  try {
+    const result = await model.generateContent([
+      QUICK_EXTRACTION_PROMPT,
+      {
+        inlineData: {
+          mimeType,
+          data: imageBase64,
+        },
+      },
+    ])
+
+    const response = await result.response
+    const text = response.text()
+
+    // Clean up the response
+    let cleanedText = text.trim()
+    if (cleanedText.startsWith('```json')) {
+      cleanedText = cleanedText.slice(7)
+    } else if (cleanedText.startsWith('```')) {
+      cleanedText = cleanedText.slice(3)
+    }
+    if (cleanedText.endsWith('```')) {
+      cleanedText = cleanedText.slice(0, -3)
+    }
+    cleanedText = cleanedText.trim()
+
+    return JSON.parse(cleanedText)
+  } catch (error) {
+    console.error('Error in quick wine extraction:', error)
+    throw new Error('Failed to extract wine information from image')
+  }
+}
+
 const WINE_EXTRACTION_PROMPT = `Analyze this wine bottle label image and extract comprehensive wine information.
 Return ONLY valid JSON with these fields (no markdown, no code blocks, just the JSON object):
 
