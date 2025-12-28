@@ -155,7 +155,7 @@ async function estimatePriceWithGemini(
   vintage?: number | null,
   region?: string | null
 ): Promise<PriceResult> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
 
   const wineDescription = [
     chateau,

@@ -30,7 +30,7 @@ IMPORTANT:
 - Return ONLY the JSON object, no additional text or formatting`
 
 export async function extractWineFromImage(imageBase64: string, mimeType: string = 'image/jpeg'): Promise<GeminiWineExtraction> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
 
   try {
     const result = await model.generateContent([
@@ -98,7 +98,7 @@ export async function getFoodPairings(wine: {
   cheese: string[]
   vegetarian: string[]
 }> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
 
   const prompt = FOOD_PAIRING_PROMPT
     .replace('{chateau}', wine.chateau || '')
