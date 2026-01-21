@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { getSession } from '@/lib/supabase'
+import { getSession } from '@/lib/supabase/server'
 import { ForgotPasswordForm } from '@/components/auth/forgot-password-form'
 
 export default async function ForgotPasswordPage() {

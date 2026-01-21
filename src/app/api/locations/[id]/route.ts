@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabase, getUser } from '@/lib/supabase'
+import { createServerSupabase, getUser } from '@/lib/supabase/server'
 
 interface RouteParams {
   params: Promise<{ id: string }>

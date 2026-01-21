@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { extractWineQuick } from '@/lib/gemini'
-import { getUser } from '@/lib/supabase'
+import { getUser } from '@/lib/supabase/server'
 
 /**
  * Quick scan endpoint - only does fast OCR to extract essential wine info

@@ -1,14 +1,11 @@
-import { createBrowserClient, createServerClient, type CookieOptions } from '@supabase/ssr'
+import 'server-only'
+
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import type { Database } from '@/types/database'
 import { cookies } from 'next/headers'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-
-// Browser client for client-side usage
-export function createClientSupabase() {
-  return createBrowserClient<Database>(supabaseUrl, supabaseAnonKey)
-}
 
 // Server client for server-side usage (App Router)
 export async function createServerSupabase() {
@@ -19,14 +16,14 @@ export async function createServerSupabase() {
       getAll() {
         return cookieStore.getAll()
       },
-      setAll(cookiesToSet) {
+      setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
         try {
           cookiesToSet.forEach(({ name, value, options }) =>
             cookieStore.set(name, value, options)
           )
         } catch {
-          // Ignore errors when setting cookies in Server Components
-          // This is expected when called from a Server Component
+          // Ignore errors when setting cookies in Server Components.
+          // This is expected when called from a Server Component.
         }
       },
     },
@@ -42,7 +39,7 @@ export async function createActionSupabase() {
       getAll() {
         return cookieStore.getAll()
       },
-      setAll(cookiesToSet) {
+      setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
         cookiesToSet.forEach(({ name, value, options }) =>
           cookieStore.set(name, value, options)
         )
@@ -50,9 +47,6 @@ export async function createActionSupabase() {
     },
   })
 }
-
-// Legacy export for backwards compatibility
-export const supabase = createBrowserClient<Database>(supabaseUrl, supabaseAnonKey)
 
 // Helper function for API routes
 export function createRouteHandlerSupabase(request: Request) {
@@ -68,7 +62,7 @@ export function createRouteHandlerSupabase(request: Request) {
         })
       },
       setAll() {
-        // Cookies cannot be set in route handlers through this method
+        // Cookies cannot be set in route handlers through this method.
       },
     },
   })

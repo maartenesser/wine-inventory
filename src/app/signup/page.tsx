@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { getSession } from '@/lib/supabase'
+import { getSession } from '@/lib/supabase/server'
 import { SignUpForm } from '@/components/auth/signup-form'
 
 export default async function SignUpPage() {

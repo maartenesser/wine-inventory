@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { extractWineFromImage } from '@/lib/gemini'
 import { getWinePrice } from '@/lib/price-scraper'
-import { getUser } from '@/lib/supabase'
+import { getUser } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {

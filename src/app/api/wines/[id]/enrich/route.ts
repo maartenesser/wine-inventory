@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabase, getUser } from '@/lib/supabase'
+import { createServerSupabase, getUser } from '@/lib/supabase/server'
 import { getWinePrice } from '@/lib/price-scraper'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 

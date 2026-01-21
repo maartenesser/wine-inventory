@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabase, getUser } from '@/lib/supabase'
+import { createServerSupabase, getUser } from '@/lib/supabase/server'
 import { v4 as uuidv4 } from 'uuid'
 
 // GET /api/wines - List all wines for the current user
