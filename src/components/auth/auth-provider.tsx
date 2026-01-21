@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { createClientSupabase } from '@/lib/supabase/client'
 import type { User, Session } from '@supabase/supabase-js'
 
@@ -9,9 +9,12 @@ interface AuthContextType {
   session: Session | null
   isLoading: boolean
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
+  signInWithOtp: (email: string) => Promise<{ error: Error | null }>
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<{ error: Error | null }>
+  updateEmail: (email: string) => Promise<{ error: Error | null }>
+  updatePassword: (password: string) => Promise<{ error: Error | null }>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -21,7 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  const supabase = createClientSupabase()
+  const supabase = useMemo(() => createClientSupabase(), [])
 
   useEffect(() => {
     // Get initial session
@@ -60,11 +63,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const signInWithOtp = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      })
+      return { error: error ? new Error(error.message) : null }
+    } catch (err) {
+      return { error: err as Error }
+    }
+  }
+
   const signUp = async (email: string, password: string) => {
     try {
       const { error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
       })
       return { error: error ? new Error(error.message) : null }
     } catch (err) {
@@ -87,6 +107,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const updateEmail = async (email: string) => {
+    try {
+      const { data, error } = await supabase.auth.updateUser({ email })
+      if (!error && data.user) {
+        setUser(data.user)
+      }
+      return { error: error ? new Error(error.message) : null }
+    } catch (err) {
+      return { error: err as Error }
+    }
+  }
+
+  const updatePassword = async (password: string) => {
+    try {
+      const { data, error } = await supabase.auth.updateUser({ password })
+      if (!error && data.user) {
+        setUser(data.user)
+      }
+      return { error: error ? new Error(error.message) : null }
+    } catch (err) {
+      return { error: err as Error }
+    }
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -94,9 +138,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         session,
         isLoading,
         signIn,
+        signInWithOtp,
         signUp,
         signOut,
         resetPassword,
+        updateEmail,
+        updatePassword,
       }}
     >
       {children}
