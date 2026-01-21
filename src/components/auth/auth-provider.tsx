@@ -9,8 +9,8 @@ interface AuthContextType {
   session: Session | null
   isLoading: boolean
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
-  signInWithOtp: (email: string) => Promise<{ error: Error | null }>
-  signUp: (email: string, password: string) => Promise<{ error: Error | null }>
+  signInWithOtp: (email: string, redirectTo?: string) => Promise<{ error: Error | null }>
+  signUp: (email: string, password: string, redirectTo?: string) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<{ error: Error | null }>
   updateEmail: (email: string) => Promise<{ error: Error | null }>
@@ -27,6 +27,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const supabase = useMemo(() => createClientSupabase(), [])
 
   useEffect(() => {
+    if (typeof window !== 'undefined' && sessionStorage.getItem('session-only') === 'true') {
+      const navEntry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined
+      if (navEntry?.type === 'reload') {
+        supabase.auth.signOut()
+        sessionStorage.removeItem('session-only')
+      }
+    }
+
     // Get initial session
     const initSession = async () => {
       const { data: { session } } = await supabase.auth.getSession()
@@ -63,12 +71,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const signInWithOtp = async (email: string) => {
+  const signInWithOtp = async (email: string, redirectTo?: string) => {
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${window.location.origin}/auth/callback${redirectTo ? `?next=${encodeURIComponent(redirectTo)}` : ''}`,
         },
       })
       return { error: error ? new Error(error.message) : null }
@@ -77,13 +85,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (email: string, password: string, redirectTo?: string) => {
     try {
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${window.location.origin}/auth/callback${redirectTo ? `?next=${encodeURIComponent(redirectTo)}` : ''}`,
         },
       })
       return { error: error ? new Error(error.message) : null }
@@ -94,6 +102,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut()
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('session-only')
+    }
   }
 
   const resetPassword = async (email: string) => {

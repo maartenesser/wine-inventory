@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from './auth-provider'
 import { Button } from '@/components/ui/button'
@@ -11,6 +11,7 @@ import { Wine, Loader2, CheckCircle } from 'lucide-react'
 
 export function SignUpForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { signUp } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -45,7 +46,12 @@ export function SignUpForm() {
 
     setIsLoading(true)
 
-    const { error } = await signUp(email, password)
+    const redirectTo = (() => {
+      const next = searchParams.get('redirect') || '/'
+      return next.startsWith('/') && !next.startsWith('//') ? next : '/'
+    })()
+
+    const { error } = await signUp(email, password, redirectTo)
 
     if (error) {
       setError(error.message)

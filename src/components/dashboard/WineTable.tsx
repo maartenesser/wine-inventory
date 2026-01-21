@@ -207,6 +207,16 @@ export function WineTable({ wines, locations = [], onUpdateQuantity, onDelete }:
     }
   }
 
+  const getImageSrc = (wine: Wine) => {
+    if (wine.image_data) {
+      return `data:image/jpeg;base64,${wine.image_data}`
+    }
+    if (wine.image_url) {
+      return wine.image_url
+    }
+    return null
+  }
+
   return (
     <div className="space-y-4">
       {/* Search and Filter */}
@@ -310,9 +320,9 @@ export function WineTable({ wines, locations = [], onUpdateQuantity, onDelete }:
                   onClick={() => router.push(`/wines/${wine.id}`)}
                 >
                   {/* Wine image */}
-                  {wine.image_data ? (
+                  {getImageSrc(wine) ? (
                     <img
-                      src={`data:image/jpeg;base64,${wine.image_data}`}
+                      src={getImageSrc(wine) as string}
                       alt={wine.chateau}
                       className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
                     />
@@ -518,9 +528,9 @@ export function WineTable({ wines, locations = [], onUpdateQuantity, onDelete }:
               sortedWines.map((wine) => (
                 <TableRow key={wine.id}>
                   <TableCell className="p-2">
-                    {wine.image_data ? (
+                    {getImageSrc(wine) ? (
                       <img
-                        src={`data:image/jpeg;base64,${wine.image_data}`}
+                        src={getImageSrc(wine) as string}
                         alt={wine.chateau}
                         className="w-12 h-12 object-cover rounded-md"
                       />

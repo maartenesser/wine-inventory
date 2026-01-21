@@ -3,7 +3,7 @@ import { createServerSupabase, getUser } from '@/lib/supabase/server'
 import { v4 as uuidv4 } from 'uuid'
 
 // GET /api/wines - List all wines for the current user
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const supabase = await createServerSupabase()
 
@@ -16,10 +16,15 @@ export async function GET() {
       )
     }
 
+    const isLite = request.nextUrl.searchParams.get('lite') === '1'
+    const selectFields = isLite
+      ? 'id, chateau, wine_name, vintage, region, appellation, country, grape_variety, color, alcohol_pct, quantity, bottle_size, price_min, price_max, price_avg, price_source, currency, image_url, location_id, drinking_window, created_at, locations(id, name)'
+      : '*, locations(id, name)'
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase
       .from('wines') as any)
-      .select('*, locations(id, name)')
+      .select(selectFields)
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
 
@@ -31,7 +36,14 @@ export async function GET() {
       )
     }
 
-    return NextResponse.json({ wines: data })
+    return NextResponse.json(
+      { wines: data },
+      {
+        headers: {
+          'Cache-Control': 'private, max-age=60, stale-while-revalidate=300',
+        },
+      }
+    )
   } catch (error) {
     console.error('Error fetching wines:', error)
     return NextResponse.json(

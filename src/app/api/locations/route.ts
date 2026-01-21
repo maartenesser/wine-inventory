@@ -31,7 +31,14 @@ export async function GET() {
       )
     }
 
-    return NextResponse.json({ locations: data || [] })
+    return NextResponse.json(
+      { locations: data || [] },
+      {
+        headers: {
+          'Cache-Control': 'private, max-age=300, stale-while-revalidate=600',
+        },
+      }
+    )
   } catch (error) {
     console.error('Error fetching locations:', error)
     return NextResponse.json(

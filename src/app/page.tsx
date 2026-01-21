@@ -7,6 +7,7 @@ import { WineTable } from '@/components/dashboard/WineTable'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
 import type { Wine as WineType, DashboardStats } from '@/types/wine'
+import { readCache, writeCache } from '@/lib/local-cache'
 
 interface Location {
   id: string
@@ -26,6 +27,7 @@ export default function DashboardPage() {
     recentAdditions: [],
   })
   const [isLoading, setIsLoading] = useState(true)
+  const cacheTtlMs = 5 * 60 * 1000
 
   const fetchLocations = useCallback(async () => {
     try {
@@ -33,6 +35,7 @@ export default function DashboardPage() {
       const data = await response.json()
       if (data.locations) {
         setLocations(data.locations)
+        writeCache('locations', data.locations)
       }
     } catch (error) {
       console.error('Error fetching locations:', error)
@@ -42,12 +45,13 @@ export default function DashboardPage() {
   const fetchWines = useCallback(async () => {
     try {
       setIsLoading(true)
-      const response = await fetch('/api/wines')
+      const response = await fetch('/api/wines?lite=1')
       const data = await response.json()
 
       if (data.wines) {
         setWines(data.wines)
         calculateStats(data.wines)
+        writeCache('wines-lite', data.wines)
       }
     } catch (error) {
       console.error('Error fetching wines:', error)
@@ -107,6 +111,17 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
+    const cachedWines = readCache<WineType[]>('wines-lite', cacheTtlMs)
+    if (cachedWines?.length) {
+      setWines(cachedWines)
+      calculateStats(cachedWines)
+      setIsLoading(false)
+    }
+    const cachedLocations = readCache<Location[]>('locations', cacheTtlMs)
+    if (cachedLocations?.length) {
+      setLocations(cachedLocations)
+    }
+
     fetchWines()
     fetchLocations()
   }, [fetchWines, fetchLocations])
@@ -120,12 +135,10 @@ export default function DashboardPage() {
       })
 
       if (response.ok) {
-        setWines((prev) =>
-          prev.map((w) => (w.id === id ? { ...w, quantity } : w))
-        )
-        calculateStats(
-          wines.map((w) => (w.id === id ? { ...w, quantity } : w))
-        )
+        const updatedWines = wines.map((w) => (w.id === id ? { ...w, quantity } : w))
+        setWines(updatedWines)
+        calculateStats(updatedWines)
+        writeCache('wines-lite', updatedWines)
         toast.success('Quantity updated')
       } else {
         toast.error('Failed to update quantity')
@@ -146,6 +159,7 @@ export default function DashboardPage() {
         const updatedWines = wines.filter((w) => w.id !== id)
         setWines(updatedWines)
         calculateStats(updatedWines)
+        writeCache('wines-lite', updatedWines)
         toast.success('Wine deleted')
       } else {
         toast.error('Failed to delete wine')

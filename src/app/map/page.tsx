@@ -15,6 +15,7 @@ import { Wine, MapPin, Globe, TrendingUp, Home } from 'lucide-react'
 import { Header } from '@/components/layout/Header'
 import type { Wine as WineType } from '@/types/wine'
 import { findWineRegion } from '@/lib/wine-regions'
+import { readCache, writeCache } from '@/lib/local-cache'
 
 interface Location {
   id: string
@@ -65,8 +66,20 @@ export default function MapPage() {
   const [countryStats, setCountryStats] = useState<CountryStats[]>([])
   const [regionStats, setRegionStats] = useState<RegionStats[]>([])
   const [locationStats, setLocationStats] = useState<LocationStats[]>([])
+  const cacheTtlMs = 5 * 60 * 1000
 
   useEffect(() => {
+    const cachedWines = readCache<WineType[]>('wines-lite', cacheTtlMs)
+    if (cachedWines?.length) {
+      setWines(cachedWines)
+      calculateStats(cachedWines)
+      setIsLoading(false)
+    }
+    const cachedLocations = readCache<Location[]>('locations', cacheTtlMs)
+    if (cachedLocations?.length) {
+      setLocations(cachedLocations)
+    }
+
     fetchWines()
     fetchLocations()
   }, [])
@@ -77,6 +90,7 @@ export default function MapPage() {
       const data = await response.json()
       if (data.locations) {
         setLocations(data.locations)
+        writeCache('locations', data.locations)
       }
     } catch (error) {
       console.error('Failed to fetch locations:', error)
@@ -85,11 +99,12 @@ export default function MapPage() {
 
   const fetchWines = async () => {
     try {
-      const response = await fetch('/api/wines')
+      const response = await fetch('/api/wines?lite=1')
       const data = await response.json()
       if (data.wines) {
         setWines(data.wines)
         calculateStats(data.wines)
+        writeCache('wines-lite', data.wines)
       }
     } catch (error) {
       console.error('Failed to fetch wines:', error)
