@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@/lib/supabase'
+import { createServerSupabase, getUser } from '@/lib/supabase'
 import { getWinePrice } from '@/lib/price-scraper'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
@@ -78,14 +78,24 @@ Focus on accuracy - only include information you are confident about.`
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params
-    const supabase = createServerSupabaseClient()
+    const supabase = await createServerSupabase()
 
-    // Fetch the wine from database
+    // Check authentication
+    const { user, error: authError } = await getUser()
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    // Fetch the wine from database (must belong to user)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: wine, error: fetchError } = await (supabase
       .from('wines') as any)
       .select('*')
       .eq('id', id)
+      .eq('user_id', user.id)
       .single()
 
     if (fetchError) {
@@ -147,6 +157,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         .from('wines') as any)
         .update(updates)
         .eq('id', id)
+        .eq('user_id', user.id)
         .select()
         .single()
 

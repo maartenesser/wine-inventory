@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@/lib/supabase'
+import { createServerSupabase, getUser } from '@/lib/supabase'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -9,13 +9,23 @@ interface RouteParams {
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params
-    const supabase = createServerSupabaseClient()
+    const supabase = await createServerSupabase()
+
+    // Check authentication
+    const { user, error: authError } = await getUser()
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase
       .from('locations') as any)
       .delete()
       .eq('id', id)
+      .eq('user_id', user.id)
 
     if (error) {
       console.error('Database error:', error)
@@ -40,7 +50,16 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params
     const body = await request.json()
-    const supabase = createServerSupabaseClient()
+    const supabase = await createServerSupabase()
+
+    // Check authentication
+    const { user, error: authError } = await getUser()
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
 
     const updates: Record<string, unknown> = {}
     if (body.name !== undefined) updates.name = body.name
@@ -51,6 +70,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       .from('locations') as any)
       .update(updates)
       .eq('id', id)
+      .eq('user_id', user.id)
       .select()
       .single()
 

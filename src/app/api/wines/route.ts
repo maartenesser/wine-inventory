@@ -1,16 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@/lib/supabase'
+import { createServerSupabase, getUser } from '@/lib/supabase'
 import { v4 as uuidv4 } from 'uuid'
 
-// GET /api/wines - List all wines
+// GET /api/wines - List all wines for the current user
 export async function GET() {
   try {
-    const supabase = createServerSupabaseClient()
+    const supabase = await createServerSupabase()
+
+    // Check authentication
+    const { user, error: authError } = await getUser()
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase
       .from('wines') as any)
       .select('*, locations(id, name)')
+      .eq('user_id', user.id)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -31,14 +41,25 @@ export async function GET() {
   }
 }
 
-// POST /api/wines - Create a new wine
+// POST /api/wines - Create a new wine for the current user
 export async function POST(request: NextRequest) {
   try {
+    const supabase = await createServerSupabase()
+
+    // Check authentication
+    const { user, error: authError } = await getUser()
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
     const body = await request.json()
-    const supabase = createServerSupabaseClient()
 
     const wine = {
       id: uuidv4(),
+      user_id: user.id,  // Associate wine with current user
       chateau: body.chateau,
       wine_name: body.wine_name || null,
       vintage: body.vintage || null,

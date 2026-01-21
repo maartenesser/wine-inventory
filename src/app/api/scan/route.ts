@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { extractWineFromImage } from '@/lib/gemini'
 import { getWinePrice } from '@/lib/price-scraper'
+import { getUser } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
+    // Check authentication
+    const { user, error: authError } = await getUser()
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
     const formData = await request.formData()
     const image = formData.get('image') as File | null
     const bottleSize = formData.get('bottle_size') as string | null

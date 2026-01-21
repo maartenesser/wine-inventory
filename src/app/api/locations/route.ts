@@ -1,16 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@/lib/supabase'
+import { createServerSupabase, getUser } from '@/lib/supabase'
 import { v4 as uuidv4 } from 'uuid'
 
-// GET /api/locations - List all locations
+// GET /api/locations - List all locations for the current user
 export async function GET() {
   try {
-    const supabase = createServerSupabaseClient()
+    const supabase = await createServerSupabase()
+
+    // Check authentication
+    const { user, error: authError } = await getUser()
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase
       .from('locations') as any)
       .select('*')
+      .eq('user_id', user.id)
       .order('name', { ascending: true })
 
     if (error) {
@@ -31,11 +41,20 @@ export async function GET() {
   }
 }
 
-// POST /api/locations - Create a new location
+// POST /api/locations - Create a new location for the current user
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const supabase = createServerSupabaseClient()
+    const supabase = await createServerSupabase()
+
+    // Check authentication
+    const { user, error: authError } = await getUser()
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
 
     if (!body.name) {
       return NextResponse.json(
@@ -46,6 +65,7 @@ export async function POST(request: NextRequest) {
 
     const location = {
       id: uuidv4(),
+      user_id: user.id,
       name: body.name,
       description: body.description || null,
     }

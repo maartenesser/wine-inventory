@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { extractWineQuick } from '@/lib/gemini'
+import { getUser } from '@/lib/supabase'
 
 /**
  * Quick scan endpoint - only does fast OCR to extract essential wine info
@@ -8,6 +9,15 @@ import { extractWineQuick } from '@/lib/gemini'
  */
 export async function POST(request: NextRequest) {
   try {
+    // Check authentication
+    const { user, error: authError } = await getUser()
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
     const formData = await request.formData()
     const image = formData.get('image') as File | null
 

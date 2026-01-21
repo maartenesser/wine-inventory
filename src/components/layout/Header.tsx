@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/sheet'
 import { Wine, Camera, Globe, Download, Menu, Home, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { UserMenu } from '@/components/auth/user-menu'
 
 interface HeaderProps {
   onRefresh?: () => void
@@ -74,24 +75,27 @@ export function Header({
           </nav>
 
           {/* Desktop actions */}
-          <div className="hidden md:flex items-center gap-2">
-            {onRefresh && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onRefresh}
-                disabled={isLoading}
-              >
-                <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
-                <span className="sr-only sm:not-sr-only sm:ml-2">Refresh</span>
-              </Button>
-            )}
-            {onExport && (
-              <Button variant="outline" size="sm" onClick={onExport}>
-                <Download className="h-4 w-4" />
-                <span className="sr-only sm:not-sr-only sm:ml-2">Export</span>
-              </Button>
-            )}
+          <div className="hidden md:flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              {onRefresh && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onRefresh}
+                  disabled={isLoading}
+                >
+                  <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
+                  <span className="sr-only sm:not-sr-only sm:ml-2">Refresh</span>
+                </Button>
+              )}
+              {onExport && (
+                <Button variant="outline" size="sm" onClick={onExport}>
+                  <Download className="h-4 w-4" />
+                  <span className="sr-only sm:not-sr-only sm:ml-2">Export</span>
+                </Button>
+              )}
+            </div>
+            <UserMenu />
           </div>
 
           {/* Mobile menu */}
@@ -177,6 +181,14 @@ export function Header({
                     )}
                   </div>
                 )}
+
+                {/* Account section */}
+                <div className="mt-6 pt-6 border-t">
+                  <p className="text-sm font-medium text-muted-foreground px-2 mb-3">
+                    Account
+                  </p>
+                  <UserMenu />
+                </div>
               </SheetContent>
             </Sheet>
           </div>
