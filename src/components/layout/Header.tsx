@@ -100,6 +100,7 @@ export function Header({
 
           {/* Mobile menu */}
           <div className="flex md:hidden items-center gap-2">
+            <UserMenu compact hideWhenLoggedOut />
             {/* Quick action button on mobile */}
             <Link href="/scan">
               <Button size="sm" className="gap-2">

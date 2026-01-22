@@ -6,7 +6,12 @@ import { useAuth } from './auth-provider'
 import { Button } from '@/components/ui/button'
 import { LogOut, Loader2, Settings, User } from 'lucide-react'
 
-export function UserMenu() {
+interface UserMenuProps {
+  compact?: boolean
+  hideWhenLoggedOut?: boolean
+}
+
+export function UserMenu({ compact = false, hideWhenLoggedOut = false }: UserMenuProps) {
   const router = useRouter()
   const { user, signOut, isLoading } = useAuth()
   const [isSigningOut, setIsSigningOut] = useState(false)
@@ -41,6 +46,9 @@ export function UserMenu() {
   }
 
   if (!user) {
+    if (hideWhenLoggedOut) {
+      return null
+    }
     return (
       <div className="flex items-center gap-2">
         <Button
@@ -74,7 +82,7 @@ export function UserMenu() {
         onClick={() => setIsOpen((prev) => !prev)}
       >
         <span className="sr-only">Open user menu</span>
-        <div className="h-9 w-9 rounded-full bg-wine-red text-white flex items-center justify-center text-sm font-semibold">
+        <div className={`rounded-full bg-wine-red text-white flex items-center justify-center text-sm font-semibold ${compact ? 'h-8 w-8' : 'h-9 w-9'}`}>
           {(user.email ?? 'U').charAt(0).toUpperCase()}
         </div>
       </Button>
