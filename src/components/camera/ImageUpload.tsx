@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, forwardRef, useImperativeHandle } from 'react'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Camera, Upload, X, Loader2 } from 'lucide-react'
@@ -124,10 +125,13 @@ export const ImageUpload = forwardRef<ImageUploadRef, ImageUploadProps>(
           <Card className="relative">
             <CardContent className="p-4">
               <div className="relative">
-                <img
+                <Image
                   src={preview}
                   alt="Wine bottle preview"
                   className="w-full rounded-lg object-contain max-h-96"
+                  width={800}
+                  height={600}
+                  unoptimized
                 />
                 {(isLoading || isConverting) && (
                   <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">

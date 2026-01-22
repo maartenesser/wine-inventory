@@ -23,9 +23,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase
-      .from('wines') as any)
+    const { data, error } = await supabase
+      .from('wines')
       .select('*')
       .eq('id', id)
       .eq('user_id', user.id)
@@ -87,9 +86,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase
-      .from('wines') as any)
+    const { data, error } = await supabase
+      .from('wines')
       .update(updates)
       .eq('id', id)
       .eq('user_id', user.id)
@@ -135,9 +133,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase
-      .from('wines') as any)
+    const { error } = await supabase
+      .from('wines')
       .delete()
       .eq('id', id)
       .eq('user_id', user.id)

@@ -82,7 +82,9 @@ export function UserMenu({ compact = false, hideWhenLoggedOut = false }: UserMen
         onClick={() => setIsOpen((prev) => !prev)}
       >
         <span className="sr-only">Open user menu</span>
-        <div className={`rounded-full bg-wine-red text-white flex items-center justify-center text-sm font-semibold ${compact ? 'h-8 w-8' : 'h-9 w-9'}`}>
+        <div
+          className={`rounded-full bg-primary text-primary-foreground shadow-sm ring-1 ring-border flex items-center justify-center text-sm font-semibold ${compact ? 'h-8 w-8' : 'h-9 w-9'}`}
+        >
           {(user.email ?? 'U').charAt(0).toUpperCase()}
         </div>
       </Button>

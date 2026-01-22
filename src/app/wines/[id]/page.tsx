@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, use } from 'react'
+import { useState, useEffect, use, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -12,7 +13,7 @@ import { Save, Loader2, Wine, Trash2 } from 'lucide-react'
 import { Header } from '@/components/layout/Header'
 import { toast } from 'sonner'
 import type { Wine as WineType } from '@/types/wine'
-import { BOTTLE_SIZES, getBottleSize } from '@/lib/bottle-sizes'
+import { BOTTLE_SIZES } from '@/lib/bottle-sizes'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -60,12 +61,7 @@ export default function WineDetailPage({ params }: { params: Promise<{ id: strin
     drinking_window: '',
   })
 
-  useEffect(() => {
-    fetchWine()
-    fetchLocations()
-  }, [id])
-
-  const fetchWine = async () => {
+  const fetchWine = useCallback(async () => {
     try {
       const response = await fetch(`/api/wines/${id}`)
       const data = await response.json()
@@ -103,9 +99,9 @@ export default function WineDetailPage({ params }: { params: Promise<{ id: strin
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [id, router])
 
-  const fetchLocations = async () => {
+  const fetchLocations = useCallback(async () => {
     try {
       const response = await fetch('/api/locations')
       const data = await response.json()
@@ -115,7 +111,12 @@ export default function WineDetailPage({ params }: { params: Promise<{ id: strin
     } catch (error) {
       console.error('Failed to fetch locations:', error)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchWine()
+    fetchLocations()
+  }, [fetchWine, fetchLocations])
 
   const handleChange = (field: string, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -253,10 +254,13 @@ export default function WineDetailPage({ params }: { params: Promise<{ id: strin
           <Card className="md:col-span-1">
             <CardContent className="p-4 md:pt-6">
               {wine.image_data ? (
-                <img
+                <Image
                   src={`data:image/jpeg;base64,${wine.image_data}`}
                   alt={wine.chateau}
                   className="w-full rounded-lg object-cover aspect-[3/4]"
+                  width={450}
+                  height={600}
+                  unoptimized
                 />
               ) : (
                 <div className="w-full aspect-[3/4] bg-muted rounded-lg flex items-center justify-center">

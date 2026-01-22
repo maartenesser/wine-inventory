@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet'
 import { findWineRegion, COUNTRY_COORDINATES } from '@/lib/wine-regions'
 import type { Wine } from '@/types/wine'
@@ -40,9 +40,7 @@ function MapController({ regions }: { regions: RegionData[] }) {
 }
 
 export function WineMap({ wines }: WineMapProps) {
-  const [regionData, setRegionData] = useState<RegionData[]>([])
-
-  useEffect(() => {
+  const regionData = useMemo(() => {
     // Group wines by region
     const regionMap = new Map<string, RegionData>()
 
@@ -92,7 +90,7 @@ export function WineMap({ wines }: WineMapProps) {
       existing.totalValue += (wine.price_avg || 0) * wine.quantity
     })
 
-    setRegionData(Array.from(regionMap.values()))
+    return Array.from(regionMap.values())
   }, [wines])
 
   if (typeof window === 'undefined') {

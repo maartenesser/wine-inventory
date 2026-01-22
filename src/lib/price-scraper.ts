@@ -17,7 +17,6 @@ export async function getWinePrice(
   bottleSize: string = 'standard'
 ): Promise<PriceResult> {
   const searchQuery = buildSearchQuery(chateau, vintage, region, bottleSize)
-  const bottleSizeInfo = getBottleSize(bottleSize)
 
   // Try Vivino first (free, no API key needed)
   try {

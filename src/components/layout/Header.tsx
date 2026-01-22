@@ -20,7 +20,6 @@ interface HeaderProps {
   onExport?: () => void
   isLoading?: boolean
   title?: string
-  showBackButton?: boolean
 }
 
 const navItems = [
@@ -34,7 +33,6 @@ export function Header({
   onExport,
   isLoading,
   title = 'Wine Inventory',
-  showBackButton = false,
 }: HeaderProps) {
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
@@ -100,7 +98,7 @@ export function Header({
 
           {/* Mobile menu */}
           <div className="flex md:hidden items-center gap-2">
-            <UserMenu compact hideWhenLoggedOut />
+            <UserMenu compact />
             {/* Quick action button on mobile */}
             <Link href="/scan">
               <Button size="sm" className="gap-2">

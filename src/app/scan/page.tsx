@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -74,7 +75,6 @@ export default function ScanPage() {
   const [showScanNext, setShowScanNext] = useState(false)
   const [isEnriching, setIsEnriching] = useState(false)
   const [enrichmentComplete, setEnrichmentComplete] = useState(false)
-  const [savedWineId, setSavedWineId] = useState<string | null>(null)
   const imageUploadRef = useRef<ImageUploadRef>(null)
   const [nearestLocationName, setNearestLocationName] = useState<string>('')
 
@@ -243,8 +243,6 @@ export default function ScanPage() {
 
         setScanCount(prev => prev + 1)
         setShowScanNext(true)
-        setSavedWineId(data.wine?.id || null)
-
         // Trigger background enrichment for price lookup
         if (data.wine?.id) {
           setIsEnriching(true)
@@ -291,26 +289,10 @@ export default function ScanPage() {
     setShowScanNext(false)
     setIsEnriching(false)
     setEnrichmentComplete(false)
-    setSavedWineId(null)
 
     if (imageUploadRef.current) {
       imageUploadRef.current.reset()
     }
-  }
-
-  const getColorBadge = (colorValue: string | null) => {
-    if (!colorValue) return null
-    const colorMap: Record<string, string> = {
-      red: 'bg-red-500',
-      white: 'bg-yellow-200 text-black',
-      rosé: 'bg-pink-300 text-black',
-      sparkling: 'bg-amber-200 text-black',
-    }
-    return (
-      <Badge className={colorMap[colorValue] || 'bg-gray-500'}>
-        {colorValue}
-      </Badge>
-    )
   }
 
   return (
@@ -458,10 +440,13 @@ export default function ScanPage() {
                   {/* Image thumbnail */}
                   {capturedImageData && (
                     <div className="flex-shrink-0">
-                      <img
+                      <Image
                         src={`data:image/jpeg;base64,${capturedImageData}`}
                         alt="Wine bottle"
                         className="w-24 h-32 object-cover rounded-lg border shadow-sm"
+                        width={96}
+                        height={128}
+                        unoptimized
                       />
                     </div>
                   )}

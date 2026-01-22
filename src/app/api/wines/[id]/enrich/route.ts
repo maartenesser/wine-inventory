@@ -90,9 +90,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Fetch the wine from database (must belong to user)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: wine, error: fetchError } = await (supabase
-      .from('wines') as any)
+    const { data: wine, error: fetchError } = await supabase
+      .from('wines')
       .select('*')
       .eq('id', id)
       .eq('user_id', user.id)
@@ -152,9 +151,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Only update if we have something to update
     if (Object.keys(updates).length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: updatedWine, error: updateError } = await (supabase
-        .from('wines') as any)
+      const { data: updatedWine, error: updateError } = await supabase
+        .from('wines')
         .update(updates)
         .eq('id', id)
         .eq('user_id', user.id)

@@ -20,9 +20,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase
-      .from('locations') as any)
+    const { error } = await supabase
+      .from('locations')
       .delete()
       .eq('id', id)
       .eq('user_id', user.id)
@@ -65,9 +64,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (body.name !== undefined) updates.name = body.name
     if (body.description !== undefined) updates.description = body.description
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase
-      .from('locations') as any)
+    const { data, error } = await supabase
+      .from('locations')
       .update(updates)
       .eq('id', id)
       .eq('user_id', user.id)

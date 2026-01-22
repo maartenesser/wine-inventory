@@ -21,9 +21,8 @@ export async function GET(request: NextRequest) {
       ? 'id, chateau, wine_name, vintage, region, appellation, country, grape_variety, color, alcohol_pct, quantity, bottle_size, price_min, price_max, price_avg, price_source, currency, image_url, location_id, drinking_window, created_at, locations(id, name)'
       : '*, locations(id, name)'
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase
-      .from('wines') as any)
+    const { data, error } = await supabase
+      .from('wines')
       .select(selectFields)
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
@@ -97,9 +96,8 @@ export async function POST(request: NextRequest) {
       drinking_window: body.drinking_window || null,
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase
-      .from('wines') as any)
+    const { data, error } = await supabase
+      .from('wines')
       .insert(wine)
       .select()
       .single()

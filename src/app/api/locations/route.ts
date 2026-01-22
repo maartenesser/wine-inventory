@@ -16,9 +16,8 @@ export async function GET() {
       )
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase
-      .from('locations') as any)
+    const { data, error } = await supabase
+      .from('locations')
       .select('*')
       .eq('user_id', user.id)
       .order('name', { ascending: true })
@@ -77,9 +76,8 @@ export async function POST(request: NextRequest) {
       description: body.description || null,
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase
-      .from('locations') as any)
+    const { data, error } = await supabase
+      .from('locations')
       .insert(location)
       .select()
       .single()

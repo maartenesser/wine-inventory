@@ -71,7 +71,8 @@ export default function ResetPasswordClient() {
       setTimeout(() => {
         router.push('/login')
       }, 2000)
-    } catch (err) {
+    } catch (error) {
+      console.error('Failed to update password:', error)
       toast.error('An unexpected error occurred')
     } finally {
       setIsLoading(false)

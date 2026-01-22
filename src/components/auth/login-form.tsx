@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from './auth-provider'
@@ -16,39 +16,62 @@ export function LoginForm() {
   const { signIn, signInWithOtp } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const [formError, setFormError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [mode, setMode] = useState<'password' | 'magic'>('password')
   const [isLinkSent, setIsLinkSent] = useState(false)
   const [isResending, setIsResending] = useState(false)
   const [rememberMe, setRememberMe] = useState(true)
+  const emailPattern = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
 
   const redirectTo = (() => {
     const next = searchParams.get('redirect') || '/'
     return next.startsWith('/') && !next.startsWith('//') ? next : '/'
   })()
 
-  useEffect(() => {
+  const queryErrorMessage = useMemo(() => {
     const queryError = searchParams.get('error')
     if (queryError === 'invalid-link') {
-      setError('That login link is expired or already used. Please request a new one.')
-    } else if (queryError === 'auth') {
-      setError('Login failed. Please try again.')
+      return 'That login link is expired or already used. Please request a new one.'
     }
+    if (queryError === 'auth') {
+      return 'Login failed. Please try again.'
+    }
+    return null
   }, [searchParams])
+
+  const errorMessage = formError ?? queryErrorMessage
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError(null)
+    setFormError(null)
+
+    const trimmedEmail = email.trim()
+    if (!trimmedEmail) {
+      setFormError('Enter your email address.')
+      return
+    }
+    if (!emailPattern.test(trimmedEmail)) {
+      setFormError('Enter a valid email address.')
+      return
+    }
+    if (mode === 'password' && !password) {
+      setFormError('Enter your password.')
+      return
+    }
+
+    if (trimmedEmail !== email) {
+      setEmail(trimmedEmail)
+    }
     setIsLoading(true)
 
     const { error } =
       mode === 'magic'
-        ? await signInWithOtp(email, redirectTo)
-        : await signIn(email, password)
+        ? await signInWithOtp(trimmedEmail, redirectTo)
+        : await signIn(trimmedEmail, password)
 
     if (error) {
-      setError(error.message)
+      setFormError(error.message)
       setIsLoading(false)
     } else {
       if (mode === 'magic') {
@@ -78,9 +101,9 @@ export function LoginForm() {
             We&apos;ve sent a magic link to <strong>{email}</strong>.
             Open it to finish signing in.
           </p>
-          {error && (
+          {errorMessage && (
             <div className="p-3 bg-destructive/10 text-destructive text-sm rounded-lg">
-              {error}
+              {errorMessage}
             </div>
           )}
           <div className="flex flex-col gap-2">
@@ -89,7 +112,7 @@ export function LoginForm() {
                 setIsResending(true)
                 const { error } = await signInWithOtp(email, redirectTo)
                 if (error) {
-                  setError(error.message)
+                  setFormError(error.message)
                 }
                 setIsResending(false)
               }}
@@ -109,7 +132,7 @@ export function LoginForm() {
               onClick={() => {
                 setIsLinkSent(false)
                 setMode('password')
-                setError(null)
+                setFormError(null)
               }}
             >
               Back to Login
@@ -183,9 +206,9 @@ export function LoginForm() {
             )}
           </div>
 
-          {error && (
+          {errorMessage && (
             <div className="p-3 bg-destructive/10 text-destructive text-sm rounded-lg">
-              {error}
+              {errorMessage}
             </div>
           )}
 
@@ -199,14 +222,16 @@ export function LoginForm() {
                 />
                 Remember me
               </label>
-              <Link
-                href="/forgot-password"
-                className="text-sm text-muted-foreground hover:text-primary"
-              >
-                Forgot password?
-              </Link>
             </div>
           )}
+          <div className="text-right">
+            <Link
+              href="/forgot-password"
+              className="text-sm text-muted-foreground hover:text-primary"
+            >
+              Forgot password?
+            </Link>
+          </div>
 
           <Button
             type="submit"

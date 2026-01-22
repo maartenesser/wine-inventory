@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import {
   Table,
   TableBody,
@@ -321,10 +322,13 @@ export function WineTable({ wines, locations = [], onUpdateQuantity, onDelete }:
                 >
                   {/* Wine image */}
                   {getImageSrc(wine) ? (
-                    <img
+                    <Image
                       src={getImageSrc(wine) as string}
                       alt={wine.chateau}
                       className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
+                      width={64}
+                      height={64}
+                      unoptimized
                     />
                   ) : (
                     <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center flex-shrink-0">
@@ -529,10 +533,13 @@ export function WineTable({ wines, locations = [], onUpdateQuantity, onDelete }:
                 <TableRow key={wine.id}>
                   <TableCell className="p-2">
                     {getImageSrc(wine) ? (
-                      <img
+                      <Image
                         src={getImageSrc(wine) as string}
                         alt={wine.chateau}
                         className="w-12 h-12 object-cover rounded-md"
+                        width={48}
+                        height={48}
+                        unoptimized
                       />
                     ) : (
                       <div className="w-12 h-12 bg-muted rounded-md flex items-center justify-center">

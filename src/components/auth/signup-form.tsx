@@ -19,6 +19,7 @@ export function SignUpForm() {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
+  const emailPattern = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
 
   const validatePassword = (pass: string) => {
     if (pass.length < 8) {
@@ -30,6 +31,20 @@ export function SignUpForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+
+    const trimmedEmail = email.trim()
+    if (!trimmedEmail) {
+      setError('Enter your email address.')
+      return
+    }
+    if (!emailPattern.test(trimmedEmail)) {
+      setError('Enter a valid email address.')
+      return
+    }
+
+    if (trimmedEmail !== email) {
+      setEmail(trimmedEmail)
+    }
 
     // Validate password
     const passwordError = validatePassword(password)
@@ -51,7 +66,7 @@ export function SignUpForm() {
       return next.startsWith('/') && !next.startsWith('//') ? next : '/'
     })()
 
-    const { error } = await signUp(email, password, redirectTo)
+    const { error } = await signUp(trimmedEmail, password, redirectTo)
 
     if (error) {
       setError(error.message)

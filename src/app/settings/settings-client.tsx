@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/components/auth/auth-provider'
 import { Button } from '@/components/ui/button'
@@ -12,6 +12,7 @@ import { Loader2 } from 'lucide-react'
 export default function SettingsClient() {
   const { user, updateEmail, updatePassword } = useAuth()
   const [email, setEmail] = useState('')
+  const [isEmailDirty, setIsEmailDirty] = useState(false)
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [emailStatus, setEmailStatus] = useState<string | null>(null)
@@ -21,9 +22,7 @@ export default function SettingsClient() {
   const [isEmailSaving, setIsEmailSaving] = useState(false)
   const [isPasswordSaving, setIsPasswordSaving] = useState(false)
 
-  useEffect(() => {
-    setEmail(user?.email ?? '')
-  }, [user])
+  const displayEmail = isEmailDirty ? email : (user?.email ?? '')
 
   const handleEmailUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -31,11 +30,20 @@ export default function SettingsClient() {
     setEmailError(null)
     setIsEmailSaving(true)
 
-    const { error } = await updateEmail(email)
+    const nextEmail = displayEmail.trim()
+    if (!nextEmail) {
+      setEmailError('Email is required.')
+      setIsEmailSaving(false)
+      return
+    }
+
+    const { error } = await updateEmail(nextEmail)
     if (error) {
       setEmailError(error.message)
     } else {
       setEmailStatus('Check your email to confirm the change.')
+      setEmail(nextEmail)
+      setIsEmailDirty(false)
     }
     setIsEmailSaving(false)
   }
@@ -80,8 +88,11 @@ export default function SettingsClient() {
                 <Input
                   id="email"
                   type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={displayEmail}
+                  onChange={(e) => {
+                    setEmail(e.target.value)
+                    setIsEmailDirty(true)
+                  }}
                   required
                 />
               </div>

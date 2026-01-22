@@ -19,9 +19,8 @@ export async function GET() {
       )
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase
-      .from('wines') as any)
+    const { data, error } = await supabase
+      .from('wines')
       .select('*')
       .eq('user_id', user.id)
       .order('chateau', { ascending: true })

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -58,6 +58,8 @@ interface LocationStats {
   totalValue: number
 }
 
+const CACHE_TTL_MS = 5 * 60 * 1000
+
 export default function MapPage() {
   const [wines, setWines] = useState<WineType[]>([])
   const [locations, setLocations] = useState<Location[]>([])
@@ -66,54 +68,7 @@ export default function MapPage() {
   const [countryStats, setCountryStats] = useState<CountryStats[]>([])
   const [regionStats, setRegionStats] = useState<RegionStats[]>([])
   const [locationStats, setLocationStats] = useState<LocationStats[]>([])
-  const cacheTtlMs = 5 * 60 * 1000
-
-  useEffect(() => {
-    const cachedWines = readCache<WineType[]>('wines-lite', cacheTtlMs)
-    if (cachedWines?.length) {
-      setWines(cachedWines)
-      calculateStats(cachedWines)
-      setIsLoading(false)
-    }
-    const cachedLocations = readCache<Location[]>('locations', cacheTtlMs)
-    if (cachedLocations?.length) {
-      setLocations(cachedLocations)
-    }
-
-    fetchWines()
-    fetchLocations()
-  }, [])
-
-  const fetchLocations = async () => {
-    try {
-      const response = await fetch('/api/locations')
-      const data = await response.json()
-      if (data.locations) {
-        setLocations(data.locations)
-        writeCache('locations', data.locations)
-      }
-    } catch (error) {
-      console.error('Failed to fetch locations:', error)
-    }
-  }
-
-  const fetchWines = async () => {
-    try {
-      const response = await fetch('/api/wines?lite=1')
-      const data = await response.json()
-      if (data.wines) {
-        setWines(data.wines)
-        calculateStats(data.wines)
-        writeCache('wines-lite', data.wines)
-      }
-    } catch (error) {
-      console.error('Failed to fetch wines:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const calculateStats = (wineList: WineType[]) => {
+  const calculateStats = useCallback((wineList: WineType[]) => {
     // Country stats
     const countryMap = new Map<string, CountryStats>()
     const regionMap = new Map<string, RegionStats>()
@@ -189,7 +144,52 @@ export default function MapPage() {
       Array.from(locMap.values())
         .sort((a, b) => b.bottleCount - a.bottleCount)
     )
-  }
+  }, [])
+
+  const fetchLocations = useCallback(async () => {
+    try {
+      const response = await fetch('/api/locations')
+      const data = await response.json()
+      if (data.locations) {
+        setLocations(data.locations)
+        writeCache('locations', data.locations)
+      }
+    } catch (error) {
+      console.error('Failed to fetch locations:', error)
+    }
+  }, [])
+
+  const fetchWines = useCallback(async () => {
+    try {
+      const response = await fetch('/api/wines?lite=1')
+      const data = await response.json()
+      if (data.wines) {
+        setWines(data.wines)
+        calculateStats(data.wines)
+        writeCache('wines-lite', data.wines)
+      }
+    } catch (error) {
+      console.error('Failed to fetch wines:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [calculateStats])
+
+  useEffect(() => {
+    const cachedWines = readCache<WineType[]>('wines-lite', CACHE_TTL_MS)
+    if (cachedWines?.length) {
+      setWines(cachedWines)
+      calculateStats(cachedWines)
+      setIsLoading(false)
+    }
+    const cachedLocations = readCache<Location[]>('locations', CACHE_TTL_MS)
+    if (cachedLocations?.length) {
+      setLocations(cachedLocations)
+    }
+
+    fetchWines()
+    fetchLocations()
+  }, [calculateStats, fetchLocations, fetchWines])
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('nl-NL', {

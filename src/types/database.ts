@@ -12,6 +12,7 @@ export interface Database {
       wines: {
         Row: {
           id: string
+          user_id: string | null
           chateau: string
           wine_name: string | null
           vintage: number | null
@@ -37,6 +38,7 @@ export interface Database {
         }
         Insert: {
           id?: string
+          user_id?: string | null
           chateau: string
           wine_name?: string | null
           vintage?: number | null
@@ -62,6 +64,7 @@ export interface Database {
         }
         Update: {
           id?: string
+          user_id?: string | null
           chateau?: string
           wine_name?: string | null
           vintage?: number | null
@@ -88,18 +91,21 @@ export interface Database {
       locations: {
         Row: {
           id: string
+          user_id: string | null
           name: string
           description: string | null
           created_at: string
         }
         Insert: {
           id?: string
+          user_id?: string | null
           name: string
           description?: string | null
           created_at?: string
         }
         Update: {
           id?: string
+          user_id?: string | null
           name?: string
           description?: string | null
         }

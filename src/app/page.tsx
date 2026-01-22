@@ -14,6 +14,8 @@ interface Location {
   name: string
 }
 
+const CACHE_TTL_MS = 5 * 60 * 1000
+
 export default function DashboardPage() {
   const [wines, setWines] = useState<WineType[]>([])
   const [locations, setLocations] = useState<Location[]>([])
@@ -27,7 +29,6 @@ export default function DashboardPage() {
     recentAdditions: [],
   })
   const [isLoading, setIsLoading] = useState(true)
-  const cacheTtlMs = 5 * 60 * 1000
 
   const fetchLocations = useCallback(async () => {
     try {
@@ -111,13 +112,13 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    const cachedWines = readCache<WineType[]>('wines-lite', cacheTtlMs)
+    const cachedWines = readCache<WineType[]>('wines-lite', CACHE_TTL_MS)
     if (cachedWines?.length) {
       setWines(cachedWines)
       calculateStats(cachedWines)
       setIsLoading(false)
     }
-    const cachedLocations = readCache<Location[]>('locations', cacheTtlMs)
+    const cachedLocations = readCache<Location[]>('locations', CACHE_TTL_MS)
     if (cachedLocations?.length) {
       setLocations(cachedLocations)
     }

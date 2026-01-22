@@ -14,13 +14,28 @@ export function ForgotPasswordForm() {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
+  const emailPattern = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+
+    const trimmedEmail = email.trim()
+    if (!trimmedEmail) {
+      setError('Enter your email address.')
+      return
+    }
+    if (!emailPattern.test(trimmedEmail)) {
+      setError('Enter a valid email address.')
+      return
+    }
+    if (trimmedEmail !== email) {
+      setEmail(trimmedEmail)
+    }
+
     setIsLoading(true)
 
-    const { error } = await resetPassword(email)
+    const { error } = await resetPassword(trimmedEmail)
 
     if (error) {
       setError(error.message)
