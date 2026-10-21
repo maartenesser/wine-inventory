@@ -78,32 +78,27 @@ export default function ScanPage() {
   const imageUploadRef = useRef<ImageUploadRef>(null)
   const [nearestLocationName, setNearestLocationName] = useState<string>('')
 
-  // Fetch locations and detect nearest one on mount
-  useEffect(() => {
-    fetchLocations()
-    detectNearestLocation()
-  }, [])
+  // Auto-select the nearest known location until the user picks one themselves
+  const autoLocation = nearestLocationName
+    ? locations.find(loc => loc.name === nearestLocationName)
+    : undefined
+  const effectiveLocation = selectedLocation || autoLocation?.id || ''
 
-  // Auto-select nearest location when both are available
+  // Tell the user once the nearest location has been auto-selected (toast is an external system)
   useEffect(() => {
-    if (nearestLocationName && locations.length > 0 && !selectedLocation) {
-      const matchingLocation = locations.find(loc => loc.name === nearestLocationName)
-      if (matchingLocation) {
-        setSelectedLocation(matchingLocation.id)
-        toast.success(`Auto-selected ${nearestLocationName} based on your location`)
-      }
+    if (autoLocation && !selectedLocation) {
+      toast.success(`Auto-selected ${autoLocation.name} based on your location`)
     }
-  }, [nearestLocationName, locations, selectedLocation])
+  }, [autoLocation, selectedLocation])
 
-  // Update editable fields when scan result changes
-  useEffect(() => {
-    if (scanResult) {
-      setChateau(scanResult.chateau || '')
-      setWineName(scanResult.wine_name || '')
-      setVintage(scanResult.vintage?.toString() || '')
-      setColor(scanResult.color || '')
-    }
-  }, [scanResult])
+  // Fill the editable fields straight from a new scan result
+  const applyScanResult = (result: ScanResult) => {
+    setScanResult(result)
+    setChateau(result.chateau || '')
+    setWineName(result.wine_name || '')
+    setVintage(result.vintage?.toString() || '')
+    setColor(result.color || '')
+  }
 
   const detectNearestLocation = () => {
     if (!navigator.geolocation) return
@@ -146,6 +141,16 @@ export default function ScanPage() {
       console.error('Failed to fetch locations:', error)
     }
   }
+
+  // Fetch locations and detect nearest one on mount
+  useEffect(() => {
+    // Both only set state from async callbacks, never synchronously in the effect body.
+    const load = async () => {
+      detectNearestLocation()
+      await fetchLocations()
+    }
+    load()
+  }, [])
 
   const handleAddLocation = async () => {
     if (!newLocationName.trim()) return
@@ -200,7 +205,7 @@ export default function ScanPage() {
       const data = await response.json()
 
       if (data.success) {
-        setScanResult(data.wine)
+        applyScanResult(data.wine)
         toast.success('Label scanned!', { duration: 1500 })
       } else {
         toast.error(data.error || 'Failed to scan label')
@@ -232,7 +237,7 @@ export default function ScanPage() {
           color: color || null,
           bottle_size: bottleSize,
           quantity,
-          location_id: selectedLocation || null,
+          location_id: effectiveLocation || null,
           image_data: capturedImageData,
           // Region, grape, etc. will be filled in by background enrichment
         }),
@@ -363,7 +368,7 @@ export default function ScanPage() {
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-2">
-                  <Select value={selectedLocation} onValueChange={setSelectedLocation}>
+                  <Select value={effectiveLocation} onValueChange={setSelectedLocation}>
                     <SelectTrigger className="flex-1">
                       <SelectValue placeholder="Select location..." />
                     </SelectTrigger>
