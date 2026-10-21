@@ -7,7 +7,7 @@ const publicRoutes = ['/login', '/signup', '/forgot-password', '/reset-password'
 // Routes that should redirect to home if logged in (but not reset-password - user needs to complete it)
 const authRoutes = ['/login', '/signup', '/forgot-password']
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Create a response to potentially modify
