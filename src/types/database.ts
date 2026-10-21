@@ -22,6 +22,7 @@ export interface Database {
           grape_variety: string | null
           color: string | null
           alcohol_pct: number | null
+          bottle_size: string | null
           quantity: number
           price_min: number | null
           price_max: number | null
@@ -33,6 +34,8 @@ export interface Database {
           location_id: string | null
           food_pairing: Json | null
           tasting_notes: string | null
+          winemaker_info: string | null
+          drinking_window: string | null
           created_at: string
           updated_at: string
         }
@@ -48,6 +51,7 @@ export interface Database {
           grape_variety?: string | null
           color?: string | null
           alcohol_pct?: number | null
+          bottle_size?: string | null
           quantity?: number
           price_min?: number | null
           price_max?: number | null
@@ -59,6 +63,8 @@ export interface Database {
           location_id?: string | null
           food_pairing?: Json | null
           tasting_notes?: string | null
+          winemaker_info?: string | null
+          drinking_window?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -74,6 +80,7 @@ export interface Database {
           grape_variety?: string | null
           color?: string | null
           alcohol_pct?: number | null
+          bottle_size?: string | null
           quantity?: number
           price_min?: number | null
           price_max?: number | null
@@ -85,8 +92,11 @@ export interface Database {
           location_id?: string | null
           food_pairing?: Json | null
           tasting_notes?: string | null
+          winemaker_info?: string | null
+          drinking_window?: string | null
           updated_at?: string
         }
+        Relationships: []
       }
       locations: {
         Row: {
@@ -109,6 +119,7 @@ export interface Database {
           name?: string
           description?: string | null
         }
+        Relationships: []
       }
       price_history: {
         Row: {
@@ -132,6 +143,7 @@ export interface Database {
           source?: string
           fetched_at?: string
         }
+        Relationships: []
       }
     }
     Views: {
@@ -141,6 +153,9 @@ export interface Database {
       [_ in never]: never
     }
     Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
       [_ in never]: never
     }
   }
