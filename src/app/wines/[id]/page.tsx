@@ -114,8 +114,11 @@ export default function WineDetailPage({ params }: { params: Promise<{ id: strin
   }, [])
 
   useEffect(() => {
-    fetchWine()
-    fetchLocations()
+    // Both fetchers only set state after their request resolves, never synchronously.
+    const load = async () => {
+      await Promise.all([fetchWine(), fetchLocations()])
+    }
+    load()
   }, [fetchWine, fetchLocations])
 
   const handleChange = (field: string, value: string | number) => {

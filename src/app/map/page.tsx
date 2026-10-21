@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -15,7 +15,7 @@ import { Wine, MapPin, Globe, TrendingUp, Home } from 'lucide-react'
 import { Header } from '@/components/layout/Header'
 import type { Wine as WineType } from '@/types/wine'
 import { findWineRegion } from '@/lib/wine-regions'
-import { readCache, writeCache } from '@/lib/local-cache'
+import { useCachedValue, writeCache } from '@/lib/local-cache'
 
 interface Location {
   id: string
@@ -60,91 +60,99 @@ interface LocationStats {
 
 const CACHE_TTL_MS = 5 * 60 * 1000
 
-export default function MapPage() {
-  const [wines, setWines] = useState<WineType[]>([])
-  const [locations, setLocations] = useState<Location[]>([])
-  const [locationFilter, setLocationFilter] = useState<string>('all')
-  const [isLoading, setIsLoading] = useState(true)
-  const [countryStats, setCountryStats] = useState<CountryStats[]>([])
-  const [regionStats, setRegionStats] = useState<RegionStats[]>([])
-  const [locationStats, setLocationStats] = useState<LocationStats[]>([])
-  const calculateStats = useCallback((wineList: WineType[]) => {
+function calculateStats(wineList: WineType[]) {
+  // Country stats
+  const countryMap = new Map<string, CountryStats>()
+  const regionMap = new Map<string, RegionStats>()
+  const locMap = new Map<string, LocationStats>()
+
+  wineList.forEach(wine => {
+    const country = wine.country || 'Unknown'
+    const regionInfo = findWineRegion(wine.region)
+    const regionName = regionInfo?.name || wine.region || 'Unknown'
+    const locationName = wine.locations?.name || 'Unknown'
+    const locationId = wine.location_id || ''
+
     // Country stats
-    const countryMap = new Map<string, CountryStats>()
-    const regionMap = new Map<string, RegionStats>()
-    const locMap = new Map<string, LocationStats>()
+    if (!countryMap.has(country)) {
+      countryMap.set(country, {
+        country,
+        wineCount: 0,
+        bottleCount: 0,
+        totalValue: 0,
+      })
+    }
+    const cStats = countryMap.get(country)!
+    cStats.wineCount += 1
+    cStats.bottleCount += wine.quantity
+    cStats.totalValue += (wine.price_avg || 0) * wine.quantity
 
-    wineList.forEach(wine => {
-      const country = wine.country || 'Unknown'
-      const regionInfo = findWineRegion(wine.region)
-      const regionName = regionInfo?.name || wine.region || 'Unknown'
-      const locationName = wine.locations?.name || 'Unknown'
-      const locationId = wine.location_id || ''
+    // Region stats
+    const regionKey = `${regionName}-${country}`
+    if (!regionMap.has(regionKey)) {
+      regionMap.set(regionKey, {
+        region: regionName,
+        country,
+        wineCount: 0,
+        bottleCount: 0,
+        totalValue: 0,
+      })
+    }
+    const rStats = regionMap.get(regionKey)!
+    rStats.wineCount += 1
+    rStats.bottleCount += wine.quantity
+    rStats.totalValue += (wine.price_avg || 0) * wine.quantity
 
-      // Country stats
-      if (!countryMap.has(country)) {
-        countryMap.set(country, {
-          country,
+    // Storage location stats
+    if (locationId) {
+      if (!locMap.has(locationId)) {
+        locMap.set(locationId, {
+          location: locationName,
+          locationId,
           wineCount: 0,
           bottleCount: 0,
           totalValue: 0,
         })
       }
-      const cStats = countryMap.get(country)!
-      cStats.wineCount += 1
-      cStats.bottleCount += wine.quantity
-      cStats.totalValue += (wine.price_avg || 0) * wine.quantity
+      const lStats = locMap.get(locationId)!
+      lStats.wineCount += 1
+      lStats.bottleCount += wine.quantity
+      lStats.totalValue += (wine.price_avg || 0) * wine.quantity
+    }
+  })
 
-      // Region stats
-      const regionKey = `${regionName}-${country}`
-      if (!regionMap.has(regionKey)) {
-        regionMap.set(regionKey, {
-          region: regionName,
-          country,
-          wineCount: 0,
-          bottleCount: 0,
-          totalValue: 0,
-        })
-      }
-      const rStats = regionMap.get(regionKey)!
-      rStats.wineCount += 1
-      rStats.bottleCount += wine.quantity
-      rStats.totalValue += (wine.price_avg || 0) * wine.quantity
+  // Sort by bottle count
+  return {
+    countryStats: Array.from(countryMap.values())
+      .sort((a, b) => b.bottleCount - a.bottleCount),
+    regionStats: Array.from(regionMap.values())
+      .filter(r => r.region !== 'Unknown')
+      .sort((a, b) => b.bottleCount - a.bottleCount)
+      .slice(0, 10),
+    locationStats: Array.from(locMap.values())
+      .sort((a, b) => b.bottleCount - a.bottleCount),
+  }
+}
 
-      // Storage location stats
-      if (locationId) {
-        if (!locMap.has(locationId)) {
-          locMap.set(locationId, {
-            location: locationName,
-            locationId,
-            wineCount: 0,
-            bottleCount: 0,
-            totalValue: 0,
-          })
-        }
-        const lStats = locMap.get(locationId)!
-        lStats.wineCount += 1
-        lStats.bottleCount += wine.quantity
-        lStats.totalValue += (wine.price_avg || 0) * wine.quantity
-      }
-    })
+export default function MapPage() {
+  // Cached data (localStorage) renders instantly; fetched data replaces it once loaded.
+  const cachedWines = useCachedValue<WineType[]>('wines-lite', CACHE_TTL_MS)
+  const cachedLocations = useCachedValue<Location[]>('locations', CACHE_TTL_MS)
+  const [fetchedWines, setWines] = useState<WineType[] | null>(null)
+  const [fetchedLocations, setLocations] = useState<Location[] | null>(null)
+  const [locationFilter, setLocationFilter] = useState<string>('all')
+  const [isFetching, setIsFetching] = useState(true)
 
-    // Sort by bottle count
-    setCountryStats(
-      Array.from(countryMap.values())
-        .sort((a, b) => b.bottleCount - a.bottleCount)
-    )
-    setRegionStats(
-      Array.from(regionMap.values())
-        .filter(r => r.region !== 'Unknown')
-        .sort((a, b) => b.bottleCount - a.bottleCount)
-        .slice(0, 10)
-    )
-    setLocationStats(
-      Array.from(locMap.values())
-        .sort((a, b) => b.bottleCount - a.bottleCount)
-    )
-  }, [])
+  const wines = useMemo(
+    () => fetchedWines ?? (cachedWines?.length ? cachedWines : []),
+    [fetchedWines, cachedWines]
+  )
+  const locations = useMemo(
+    () => fetchedLocations ?? (cachedLocations?.length ? cachedLocations : []),
+    [fetchedLocations, cachedLocations]
+  )
+  const { countryStats, regionStats, locationStats } = useMemo(() => calculateStats(wines), [wines])
+  const isLoading = isFetching && !cachedWines?.length
 
   const fetchLocations = useCallback(async () => {
     try {
@@ -165,31 +173,22 @@ export default function MapPage() {
       const data = await response.json()
       if (data.wines) {
         setWines(data.wines)
-        calculateStats(data.wines)
         writeCache('wines-lite', data.wines)
       }
     } catch (error) {
       console.error('Failed to fetch wines:', error)
     } finally {
-      setIsLoading(false)
+      setIsFetching(false)
     }
-  }, [calculateStats])
+  }, [])
 
   useEffect(() => {
-    const cachedWines = readCache<WineType[]>('wines-lite', CACHE_TTL_MS)
-    if (cachedWines?.length) {
-      setWines(cachedWines)
-      calculateStats(cachedWines)
-      setIsLoading(false)
+    // Both fetchers only set state after their request resolves, never synchronously.
+    const load = async () => {
+      await Promise.all([fetchWines(), fetchLocations()])
     }
-    const cachedLocations = readCache<Location[]>('locations', CACHE_TTL_MS)
-    if (cachedLocations?.length) {
-      setLocations(cachedLocations)
-    }
-
-    fetchWines()
-    fetchLocations()
-  }, [calculateStats, fetchLocations, fetchWines])
+    load()
+  }, [fetchLocations, fetchWines])
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('nl-NL', {
