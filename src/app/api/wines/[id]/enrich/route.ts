@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase, getUser } from '@/lib/supabase/server'
 import { getWinePrice } from '@/lib/price-scraper'
+import type { Database } from '@/types/database'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || '')
@@ -112,7 +113,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Prepare updates
-    const updates: Record<string, unknown> = {}
+    const updates: Database['public']['Tables']['wines']['Update'] = {}
 
     // 1. Enrich wine information (region, grape, etc.) if missing
     const needsInfoEnrichment = !wine.region || !wine.grape_variety || !wine.drinking_window
@@ -136,7 +137,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       const priceResult = await getWinePrice(
         wine.chateau,
         wine.vintage,
-        updates.region as string || wine.region, // Use newly found region if available
+        updates.region || wine.region, // Use newly found region if available
         wine.bottle_size || 'standard'
       )
 

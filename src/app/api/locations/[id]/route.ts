@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase, getUser } from '@/lib/supabase/server'
+import type { Database } from '@/types/database'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -60,7 +61,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    const updates: Record<string, unknown> = {}
+    const updates: Database['public']['Tables']['locations']['Update'] = {}
     if (body.name !== undefined) updates.name = body.name
     if (body.description !== undefined) updates.description = body.description
 
